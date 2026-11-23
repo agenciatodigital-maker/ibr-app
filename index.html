@@ -359,6 +359,17 @@ async function empurrar(){
   if(erros.length){toast("Não foi possível salvar: "+erros[0]);await carregar(true);}
   else marcarSnap();
 }
+function senhaTemp(){const L="ABCDEFGHJKLMNPQRSTUVWXYZ",l="abcdefghijkmnpqrstuvwxyz",N="23456789";const r=n=>{const a=new Uint32Array(1);crypto.getRandomValues(a);return a[0]%n;};let s="";for(let i=0;i<3;i++)s+=L[r(L.length)];for(let i=0;i<3;i++)s+=l[r(l.length)];for(let i=0;i<3;i++)s+=N[r(N.length)];return s;}
+async function resetarSenha(u){
+  const s=senhaTemp();
+  const {error}=await sb.rpc("admin_redefinir_senha",{alvo:u.id,nova:s});
+  if(error){return toast("Não foi possível gerar a senha agora.");}
+  state.senhaTemp={nome:nomeExib(u),tel:digitos(u.tel),senha:s};
+  await carregar(true);render();
+}
+function bannerTemp(){const t=state.senhaTemp;if(!t)return "";
+  const m="Olá, "+t.nome.split(" ")[0]+"! Sua senha temporária do app da IBR é "+t.senha+". Entre com o seu telefone e, em Minha conta, troque por uma senha só sua.";
+  return `<div class="card stack" role="status"><b>Senha temporária de ${esc(t.nome)}</b><span style="font-size:1.4rem;letter-spacing:.08em;font-weight:700">${esc(t.senha)}</span><span class="small muted">Anote ou envie agora: ela não aparece de novo. A pessoa será convidada a trocar na primeira entrada.</span><a class="btn" target="_blank" rel="noopener" href="https://wa.me/55${esc(t.tel)}?text=${encodeURIComponent(m)}">Enviar pelo WhatsApp</a><button class="btn ghost" data-act="fechaTemp">Já enviei</button></div>`;}
 function salvar(){fila=fila.then(empurrar).catch(e=>{toast("Sem conexão. Tente de novo.");});return true;}
 function itemDe(r){return {...r.dados,id:r.id,_c:r.criado};}
 async function carregar(silencioso){
@@ -800,6 +811,7 @@ function telaConta(){
      ${state.erro?`<p class="err" role="alert">${esc(state.erro)}</p>`:""}
      <button class="btn" type="submit">Entrar</button>
    </form>
+   <button type="button" class="btn ghost" data-act="esqueci">Esqueci minha senha</button>
    <button class="btn ghost" data-go-conta="cadastro">Ainda não tenho cadastro</button>
   </div></div>`;
 }
@@ -847,6 +859,14 @@ function telaPerfil(){
    <div class="card list">${linhaMembro(u)}</div>
    <p class="small muted">Papel: ${u.papel==="lider"?"Líder"+((u.liderDe||[]).length?" de "+esc(u.liderDe.join(", ")):""):(PAPEL[u.papel]||"Membro")}</p>
    ${isAdmin()?`<button class="btn" data-go-conta="admin">${icon.shield} Painel do administrador</button>`:""}
+   ${u.trocarSenha?`<div class="alerta" role="alert"><span><b>Crie sua senha pessoal</b><br><span class="small">Você entrou com uma senha temporária. Troque agora por uma que só você saiba.</span></span></div>`:""}
+   <form class="card stack" id="fSenha" novalidate><h3>Alterar senha</h3>
+     <label for="sA">Senha atual<span class="pw"><input id="sA" type="password" autocomplete="current-password" required maxlength="20"><button type="button" class="pwb" data-pw aria-label="Mostrar senha">Mostrar</button></span></label>
+     <label for="sN">Nova senha<span class="pw"><input id="sN" type="password" autocomplete="new-password" required minlength="8" maxlength="20"><button type="button" class="pwb" data-pw aria-label="Mostrar senha">Mostrar</button></span></label>
+     <label for="sN2">Repita a nova senha<span class="pw"><input id="sN2" type="password" autocomplete="new-password" required minlength="8" maxlength="20"><button type="button" class="pwb" data-pw aria-label="Mostrar senha">Mostrar</button></span></label>
+     <p class="small muted">De 8 a 20 caracteres, com letras e números (sem espaços ou símbolos).</p>
+     <button class="btn" type="submit">Salvar nova senha</button>
+   </form>
    <button class="btn ghost" data-act="sair">Sair</button>
   </div></div>`;
 }
@@ -878,12 +898,13 @@ function telaAdmin(){
   }else if(t==="membros"){
     const q=norm(state.admBusca);
     const lst=ativos().filter(u=>!q||norm(u.nome).includes(q)).sort((a,b)=>a.nome.localeCompare(b.nome));
-    corpo=`<label for="admBusca">Buscar<input id="admBusca" type="search" value="${esc(state.admBusca)}" placeholder="Nome"></label>`+lst.map(u=>`<div class="card stack">
+    corpo=bannerTemp()+`<label for="admBusca">Buscar<input id="admBusca" type="search" value="${esc(state.admBusca)}" placeholder="Nome"></label>`+lst.map(u=>`<div class="card stack">
       <div class="sechead"><b>${esc(nomeExib(u))}</b><span class="small muted">${esc(LOC[u.local]||"")}</span></div>
       <div class="grid2"><label for="pp-${esc(u.id)}">Papel<select id="pp-${esc(u.id)}" data-papel="${esc(u.id)}" ${u.id===db.sessao?"disabled":""}>${[["membro","Membro"],["lider","Líder"],["comunicacao","Comunicação"],["colegiado","Colegiado"],["admin","Administrador"]].map(([k,l])=>`<option value="${k}" ${u.papel===k?"selected":""}>${l}</option>`).join("")}</select></label>
       <label for="ld-${esc(u.id)}">Liderar ministério<select id="ld-${esc(u.id)}" data-lider="${esc(u.id)}"><option value="">Adicionar…</option>${MINS.filter(m=>!(u.liderDe||[]).includes(m)).map(m=>`<option value="${esc(m)}">${esc(m)}</option>`).join("")}</select></label></div>
       ${(u.liderDe||[]).length?`<div class="chips">${u.liderDe.map(m=>`<button class="chip" data-tirar="${esc(u.id)}" data-min="${esc(m)}" aria-label="Remover liderança de ${esc(m)}">${esc(m)} ×</button>`).join("")}</div>`:""}
       <label class="inline"><input type="checkbox" data-novo="${esc(u.id)}" ${u.novo?"checked":""}> Novo membro (aguardando batismo ou aclamação)</label>
+      ${u.demo||u.id===db.sessao?"":`<button class="link" data-ask="resetSenha" data-id="${esc(u.id)}">Gerar senha temporária</button>${confirmBox("resetSenha",u.id,"Gerar uma senha temporária para "+nomeExib(u)+"? A senha atual deixa de funcionar.","Gerar senha")}`}
       ${u.demo?`<span class="small muted">Conta de demonstração do pastor.</span>`:u.id===db.sessao?"":`<button class="link danger" data-ask="excluir" data-id="${esc(u.id)}">Excluir cadastro</button>`}
       ${confirmBox("excluir",u.id,"Excluir este cadastro e todos os dados da pessoa?","Excluir")}</div>`).join("");
   }else if(t==="publicar"){
@@ -947,14 +968,17 @@ document.addEventListener("click",ev=>{
   if(d.vinc){if(!isAdmin())return;if(d.vinc==="desfazer")delete db.vinculos[d.k];else db.vinculos[d.k]={s:d.vinc,rel:d.rel||""};salvar();toast(d.vinc==="ok"?"Vínculo confirmado":d.vinc==="nao"?"Sugestão descartada":"Vínculo desfeito");return render();}
   if(d.do)return acao(d.do,d.id);
   if(d.act==="copyPix"){const t=el("#pixKey").textContent;try{navigator.clipboard.writeText(t).then(()=>toast("Chave copiada"),()=>toast("Selecione a chave e copie"));}catch(_){toast("Selecione a chave e copie");}return;}
+  if(d.act==="esqueci"){const t=digitos((el("#lT")||{}).value||"");const m="Olá! Esqueci minha senha do app da IBR."+(t?" Meu telefone de cadastro é "+t+".":"")+" Pode me ajudar a criar uma nova?";window.open("https://wa.me/5586999625212?text="+encodeURIComponent(m),"_blank","noopener");return;}
+  if(d.act==="fechaTemp"){state.senhaTemp=null;return render();}
   if(d.act==="sair"){fila.then(()=>sb.auth.signOut()).then(()=>{db=dbNovo();marcarSnap();toast("Você saiu da conta");go("inicio");});return;}
 });
 function acao(a,id){
-  const adminOnly=["delFin","aprovar","recusar","excluir","aprovarRec","recusarRec","delVisita","orado"];
+  const adminOnly=["delFin","aprovar","recusar","excluir","aprovarRec","recusarRec","delVisita","orado","resetSenha"];
   const perm={delDevo:podeDevo,delAviso:podeAviso,delAlbum:podeAlbum};
   if(adminOnly.includes(a)&&!isAdmin())return toast("Apenas administradores");
   if(perm[a]&&!perm[a]())return toast("Você não tem permissão para isso");
   const u=db.usuarios.find(x=>x.id===id);
+  if(a==="resetSenha"&&u&&!u.demo&&u.id!==db.sessao){resetarSenha(u);state.confirm=null;return;}
   if(a==="aprovar"&&u){u.status="ativo";u.novo=false;toast("Cadastro aprovado");}
   if(a==="recusar"&&u&&!u.demo&&u.status==="pendente"){db.usuarios=db.usuarios.filter(x=>x.id!==id);Object.keys(db.vinculos).forEach(k=>{if(k.split("|").includes(id))delete db.vinculos[k];});toast("Cadastro recusado e apagado");}
   if(a==="excluir"&&u&&!u.demo&&u.id!==db.sessao){db.usuarios=db.usuarios.filter(x=>x.id!==id);Object.keys(db.vinculos).forEach(k=>{if(k.split("|").includes(id))delete db.vinculos[k];});toast("Cadastro excluído");}
@@ -1021,8 +1045,24 @@ document.addEventListener("submit",async ev=>{
       const st=await carregar();
       if(st==="pendente"){btn.disabled=false;return mostrarErro(ev.target,"Seu cadastro ainda está aguardando a aprovação da liderança.");}
       if(st!=="ok"){btn.disabled=false;return mostrarErro(ev.target,"Não foi possível entrar agora. Tente de novo.");}
-      toast("Bem-vindo(a), "+(me()?.nome||"").split(" ")[0]);return go("inicio");
+      toast(me()?.trocarSenha?"Crie agora a sua senha pessoal":"Bem-vindo(a), "+(me()?.nome||"").split(" ")[0]);return me()?.trocarSenha?go("conta","perfil"):go("inicio");
     }catch(_){btn.disabled=false;return mostrarErro(ev.target,"Sem conexão. Tente de novo em instantes.");}
+  }
+  if(f==="fSenha"&&me()){
+    const a=el("#sA").value,n=el("#sN").value,n2=el("#sN2").value,btn=ev.target.querySelector('button[type="submit"]');
+    if(!a)return mostrarErro(ev.target,"Digite a senha atual.");
+    if(!SENHA.test(n))return mostrarErro(ev.target,"A nova senha precisa ter de 8 a 20 caracteres, com letras e números (sem espaços ou símbolos).");
+    if(n!==n2)return mostrarErro(ev.target,"As duas senhas novas não são iguais.");
+    if(n===a)return mostrarErro(ev.target,"Escolha uma senha diferente da atual.");
+    btn.disabled=true;
+    try{
+      const r=await sb.auth.signInWithPassword({email:emailDe(me().tel),password:a});
+      if(r.error){btn.disabled=false;return mostrarErro(ev.target,"A senha atual está incorreta.");}
+      const up=await sb.auth.updateUser({password:n});
+      if(up.error){btn.disabled=false;return mostrarErro(ev.target,"Não foi possível alterar agora. Tente de novo.");}
+      me().trocarSenha=false;salvar();render();toast("Senha alterada com sucesso");
+    }catch(_){btn.disabled=false;return mostrarErro(ev.target,"Sem conexão. Tente de novo em instantes.");}
+    return;
   }
   if(f==="fRec"&&me()){db.recs.unshift({id:uid(),k:state.recTab,t:v("recT"),a:v("recA")||"—",por:me().nome,status:"pendente"});salvar();ev.target.reset();return toast("Indicação enviada para aprovação");}
   if(f==="fVis"&&isLider()){const oc=(el('input[name="vO"]:checked')||{}).value;

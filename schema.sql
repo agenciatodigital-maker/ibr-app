@@ -132,3 +132,15 @@ grant select, insert, update on public.perfis to authenticated;
 grant select, insert, update, delete on public.registros to authenticated;
 grant select on public.perfis_lista to authenticated;
 grant execute on function public.admin_excluir_usuario(uuid) to authenticated;
+
+-- Redefinir senha (somente administrador): gera senha temporaria e marca troca obrigatoria
+create or replace function public.admin_redefinir_senha(alvo uuid, nova text)
+returns void language plpgsql security definer set search_path = public, extensions, auth as $$
+begin
+  if coalesce(public.meu_papel(), '') <> 'admin' then raise exception 'sem permissao'; end if;
+  if nova !~ '^(?=.*[A-Za-z])(?=.*[0-9])[A-Za-z0-9]{8,20}$' then raise exception 'senha invalida'; end if;
+  update auth.users set encrypted_password = crypt(nova, gen_salt('bf')), updated_at = now() where id = alvo;
+  update public.perfis set dados = coalesce(dados, '{}'::jsonb) || '{"trocarSenha":true}'::jsonb where id = alvo;
+end $$;
+revoke all on function public.admin_redefinir_senha(uuid, text) from public, anon;
+grant execute on function public.admin_redefinir_senha(uuid, text) to authenticated;
