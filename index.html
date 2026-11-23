@@ -196,7 +196,7 @@ button:active,a.iconbtn:active,.menu button:active{transform:scale(.97);opacity:
 .tabs2 button{min-height:44px}
 .chip{min-height:40px}
 .link{min-height:44px}
-button.acct{min-height:44px}
+button.acct{min-height:44px}.pw{position:relative;display:block}.pw input{width:100%;padding-right:84px}.pwb{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:transparent;border:0;color:var(--sea,#1d4e6b);font:inherit;font-size:.8rem;font-weight:600;padding:8px;min-height:36px;cursor:pointer}
 button.link{min-height:44px}
 .cal button{aspect-ratio:auto;min-height:40px;min-width:0}
 .sobre a{display:inline-flex;align-items:center;min-height:44px}
@@ -796,7 +796,7 @@ function telaConta(){
   return `<div class="wrap"><div class="section">${voltar("inicio")}<span class="eyebrow">Acesso de membros</span><h2>Entrar</h2>
    <form class="card stack" id="fLogin" novalidate>
      <label for="lT">Telefone (WhatsApp)<input id="lT" inputmode="tel" autocomplete="username" required placeholder="(99) 9 0000-0000"></label>
-     <label for="lS">Senha<input id="lS" type="password" autocomplete="current-password" required maxlength="20"></label>
+     <label for="lS">Senha<span class="pw"><input id="lS" type="password" autocomplete="current-password" required maxlength="20"><button type="button" class="pwb" data-pw aria-label="Mostrar senha">Mostrar</button></span></label>
      ${state.erro?`<p class="err" role="alert">${esc(state.erro)}</p>`:""}
      <button class="btn" type="submit">Entrar</button>
    </form>
@@ -834,8 +834,8 @@ function telaCadastro(){
      <p class="small muted">A informação de dizimista só é vista pela administração e entra apenas como quantidade no resumo financeiro.</p>
      <label for="cF">Foto (opcional)<input id="cF" type="file" accept="image/*"></label>
      <h3>Acesso</h3>
-     <div class="grid2"><label for="cS">Senha *<input id="cS" type="password" required minlength="8" maxlength="20" autocomplete="new-password"></label>
-     <label for="cS2">Confirmar senha *<input id="cS2" type="password" required minlength="8" maxlength="20" autocomplete="new-password"></label></div>
+     <div class="grid2"><label for="cS">Senha *<span class="pw"><input id="cS" type="password" required minlength="8" maxlength="20" autocomplete="new-password"><button type="button" class="pwb" data-pw aria-label="Mostrar senha">Mostrar</button></span></label>
+     <label for="cS2">Confirmar senha *<span class="pw"><input id="cS2" type="password" required minlength="8" maxlength="20" autocomplete="new-password"><button type="button" class="pwb" data-pw aria-label="Mostrar senha">Mostrar</button></span></label></div>
      <p class="small muted">No mínimo 8 caracteres, com letras e números (sem espaços ou símbolos).</p>
      <label class="inline"><input type="checkbox" id="cOk" required> Autorizo a Igreja Batista Restauração a usar meus dados (nome, contatos, endereço, nascimento, filiação, situação familiar, batismo, ministérios, informação de dizimista e foto) dentro do app da igreja, conforme a LGPD.</label>
      <button class="btn" type="submit">Enviar cadastro</button>
@@ -975,6 +975,7 @@ document.addEventListener("change",ev=>{
   if(d.novo){const u=db.usuarios.find(x=>x.id===d.novo);if(u){u.novo=t.checked;salvar();}}
 });
 document.addEventListener("compositionend",ev=>ev.target.dispatchEvent(new Event("input",{bubbles:true})));
+document.addEventListener("click",ev=>{const b=ev.target.closest&&ev.target.closest("[data-pw]");if(!b)return;const i=b.parentElement.querySelector("input");const ver=i.type==="password";i.type=ver?"text":"password";b.textContent=ver?"Ocultar":"Mostrar";b.setAttribute("aria-label",ver?"Ocultar senha":"Mostrar senha");});
 document.addEventListener("input",ev=>{if(ev.target&&ev.target.hasAttribute&&ev.target.hasAttribute("data-mdata")){let d=ev.target.value.replace(/\D/g,"").slice(0,8);ev.target.value=d.length>4?d.slice(0,2)+"/"+d.slice(2,4)+"/"+d.slice(4):d.length>2?d.slice(0,2)+"/"+d.slice(2):d;}
   const t=ev.target; if(ev.isComposing)return;
   if(t.id==="busca"||t.id==="admBusca"){if(t.id==="busca")state.busca=t.value;else state.admBusca=t.value;const pos=t.selectionStart;render();const i=el("#"+t.id);if(i){i.focus();i.setSelectionRange(pos,pos);}}
