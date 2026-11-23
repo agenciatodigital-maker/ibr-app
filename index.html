@@ -58,7 +58,7 @@ label{font-size:.82rem;font-weight:600;color:var(--muted);display:flex;flex-dire
 /* Hero */
 .hero{background:var(--sea);color:#fff;position:relative;overflow:hidden}
 .hero .wrap{position:relative;z-index:1;padding-block:22px 64px;display:flex;flex-direction:column;gap:14px}
-.brand{display:flex;align-items:center;justify-content:flex-end;gap:0}
+.brand{display:flex;align-items:center;gap:12px}
 .logo{width:56px;height:56px;flex:none}
 .brand h1{font-size:1.25rem;color:#fff}
 .brand p{font-size:.8rem;opacity:.85}
@@ -69,7 +69,7 @@ label{font-size:.82rem;font-weight:600;color:var(--muted);display:flex;flex-dire
 .tema small{opacity:.8}
 .waves{position:absolute;left:0;right:0;bottom:-1px;width:100%;height:70px;z-index:0}
 .sunball{position:absolute;right:-30px;top:-30px;width:150px;height:150px;border-radius:50%;background:var(--sun);opacity:.22}
-.rolebar{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:.8rem}
+.rolebar{position:absolute;top:22px;right:max(16px,env(safe-area-inset-right,0px));z-index:2;display:flex;align-items:center;justify-content:flex-end;gap:8px;font-size:.8rem}
 .seg{display:inline-flex;background:rgba(255,255,255,.14);border-radius:99px;padding:3px}
 .seg button{border:0;background:transparent;color:#fff;padding:6px 12px;border-radius:99px;font-size:.78rem;font-weight:600;min-height:32px}
 .seg button[aria-pressed="true"]{background:#fff;color:var(--sea)}
