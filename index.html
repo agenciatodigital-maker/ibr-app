@@ -811,7 +811,7 @@ function telaCadastro(){
    <form class="card stack" id="fCad" novalidate>
      <h3>Dados pessoais</h3>
      <label for="cN">Nome completo *<input id="cN" required maxlength="100" autocomplete="name"></label>
-     <div class="grid2"><label for="cB">Data de nascimento *<input id="cB" type="date" required></label>
+     <div class="grid2"><label for="cB">Data de nascimento *<input id="cB" type="text" inputmode="numeric" autocomplete="off" placeholder="dd/mm/aaaa" maxlength="10" data-mdata required></label>
      <label for="cPr">Profissão<input id="cPr" maxlength="60"></label></div>
      <label for="cE">Endereço completo<textarea id="cE" rows="2" maxlength="200" placeholder="Rua, número, bairro, cidade"></textarea></label>
      <div class="grid2"><label for="cT">Telefone (WhatsApp) *<input id="cT" inputmode="tel" required placeholder="(99) 9 0000-0000"></label>
@@ -822,9 +822,9 @@ function telaCadastro(){
      <p class="small muted">Os nomes do pai e da mãe ajudam a liderança a identificar as famílias da igreja.</p>
      <h3>Família e fé</h3>
      <fieldset><legend>Casado(a)?</legend>${rad("cCas",[["sim","Sim"],["nao","Não"]])}</fieldset>
-     <label for="cC">Data de casamento<input id="cC" type="date"></label>
+     <label for="cC">Data de casamento<input id="cC" type="text" inputmode="numeric" autocomplete="off" placeholder="dd/mm/aaaa" maxlength="10" data-mdata></label>
      <fieldset><legend>Batizado(a)?</legend>${rad("cBat",[["sim","Sim"],["nao","Não"]])}</fieldset>
-     <div class="grid2"><label for="cBD">Data do batismo<input id="cBD" type="date"></label><label for="cBL">Local do batismo<input id="cBL" maxlength="80"></label></div>
+     <div class="grid2"><label for="cBD">Data do batismo<input id="cBD" type="text" inputmode="numeric" autocomplete="off" placeholder="dd/mm/aaaa" maxlength="10" data-mdata></label><label for="cBL">Local do batismo<input id="cBL" maxlength="80"></label></div>
      <h3>Na igreja</h3>
      <fieldset><legend>Você é *</legend>${rad("cV",[["membro","Membro"],["congregado","Congregado"],["visitante","Visitante"]])}</fieldset>
      <label for="cL">Onde você congrega *<select id="cL" required><option value="">Escolha</option>${Object.entries(LOC).map(([k,v])=>`<option value="${k}">${v}</option>`).join("")}</select></label>
@@ -975,14 +975,14 @@ document.addEventListener("change",ev=>{
   if(d.novo){const u=db.usuarios.find(x=>x.id===d.novo);if(u){u.novo=t.checked;salvar();}}
 });
 document.addEventListener("compositionend",ev=>ev.target.dispatchEvent(new Event("input",{bubbles:true})));
-document.addEventListener("input",ev=>{
+document.addEventListener("input",ev=>{if(ev.target&&ev.target.hasAttribute&&ev.target.hasAttribute("data-mdata")){let d=ev.target.value.replace(/\D/g,"").slice(0,8);ev.target.value=d.length>4?d.slice(0,2)+"/"+d.slice(2,4)+"/"+d.slice(4):d.length>2?d.slice(0,2)+"/"+d.slice(2):d;}
   const t=ev.target; if(ev.isComposing)return;
   if(t.id==="busca"||t.id==="admBusca"){if(t.id==="busca")state.busca=t.value;else state.admBusca=t.value;const pos=t.selectionStart;render();const i=el("#"+t.id);if(i){i.focus();i.setSelectionRange(pos,pos);}}
 });
 function lerImagem(file,max){return new Promise((res,rej)=>{if(!file||!/^image\//.test(file.type))return rej();const r=new FileReader();r.onload=()=>{const img=new Image();img.onload=()=>{const k=Math.min(1,max/Math.max(img.width,img.height));const c=document.createElement("canvas");c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);c.getContext("2d").drawImage(img,0,0,c.width,c.height);res(c.toDataURL("image/jpeg",.72));};img.onerror=rej;img.src=r.result;};r.onerror=rej;r.readAsDataURL(file);});}
 const SENHA=/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z0-9]{8,20}$/;
 document.addEventListener("submit",async ev=>{
-  ev.preventDefault();const f=ev.target.id, v=id=>(el("#"+id)?.value||"").trim(), rv=n=>(el(`input[name="${n}"]:checked`)||{}).value, hojeISO=hojeLocal();
+  ev.preventDefault();const f=ev.target.id, v=id=>{const t=(el("#"+id)?.value||"").trim();if(el("#"+id)?.hasAttribute("data-mdata")){const m=t.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);if(!m)return "";const d=+m[1],mo=+m[2],a=+m[3],dt=new Date(a,mo-1,d);if(a<1900||dt.getFullYear()!==a||dt.getMonth()!==mo-1||dt.getDate()!==d)return "";return m[3]+"-"+m[2]+"-"+m[1];}return t;}, rv=n=>(el(`input[name="${n}"]:checked`)||{}).value, hojeISO=hojeLocal();
   if(f==="fCad"){
     const nome=v("cN").replace(/\s+/g," "), tel=digitos(v("cT")), vin=(el('input[name="cV"]:checked')||{}).value, loc=v("cL"), s1=el("#cS").value, s2=el("#cS2").value;
     const err=!nome||nome.split(" ").length<2?"Escreva o nome completo (nome e sobrenome).":!v("cB")?"Informe a data de nascimento.":v("cB")>hojeISO?"A data de nascimento não pode ser no futuro.":(tel.length<10||tel.length>11)?"Informe o telefone com DDD, só números ou no formato (99) 9 0000-0000.":!vin?"Marque se você é membro, congregado ou visitante.":!loc?"Escolha onde você congrega.":!SENHA.test(s1)?"A senha precisa ter no mínimo 8 caracteres, com letras e números, sem espaços ou símbolos.":s1!==s2?"A confirmação não é igual à senha.":!el("#cOk").checked?"Para concluir, autorize o uso dos dados (LGPD).":"";
