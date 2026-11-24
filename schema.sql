@@ -216,3 +216,30 @@ drop policy if exists ps_editar on public.push_subs;
 create policy ps_editar on public.push_subs for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
 drop policy if exists ps_apagar on public.push_subs;
 create policy ps_apagar on public.push_subs for delete to authenticated using (user_id = auth.uid());
+
+-- ===== v3b: usuário troca o próprio telefone (login) =====
+create or replace function public.proteger_perfil() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if coalesce(public.meu_papel(), '') <> 'admin' then
+    new.papel := old.papel; new.status := old.status; new.lider_de := old.lider_de;
+    new.novo := old.novo;
+    if coalesce(current_setting('ibr.troca_tel', true), '') <> '1' then new.tel := old.tel; end if;
+  end if;
+  return new;
+end $$;
+create or replace function public.trocar_telefone(novo text)
+returns void language plpgsql security definer set search_path = public, auth as $$
+declare em text := novo || '@membros-ibr.app';
+begin
+  if auth.uid() is null then raise exception 'sem sessao'; end if;
+  if novo !~ '^[0-9]{10,11}$' then raise exception 'telefone invalido'; end if;
+  if exists(select 1 from public.perfis where tel = novo and id <> auth.uid())
+     or exists(select 1 from auth.users where email = em and id <> auth.uid()) then raise exception 'telefone em uso'; end if;
+  perform set_config('ibr.troca_tel', '1', true);
+  update auth.users set email = em, updated_at = now() where id = auth.uid();
+  update auth.identities set identity_data = jsonb_set(identity_data, '{email}', to_jsonb(em)), provider_id = em, updated_at = now() where user_id = auth.uid() and provider = 'email';
+  update public.perfis set tel = novo where id = auth.uid();
+end $$;
+revoke all on function public.trocar_telefone(text) from public, anon;
+grant execute on function public.trocar_telefone(text) to authenticated;

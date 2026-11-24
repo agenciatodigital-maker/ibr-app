@@ -463,6 +463,28 @@ async function desativarPush(){
     if(sub){await sb.from("push_subs").delete().eq("endpoint",sub.endpoint);await sub.unsubscribe();}}catch(_){}
 }
 function enviarPush(t,x,g){try{sb.functions.invoke("enviar-push",{body:{titulo:t,corpo:(x||"").slice(0,140),grupo:g}});}catch(_){}}
+const dBR=s=>(s||"").split("-").reverse().join("/");
+function meusDadosForm(u){
+  const rad=(n,val)=>`<div class="radios"><label><input type="radio" name="${n}" value="sim"${val==="sim"?" checked":""}> Sim</label><label><input type="radio" name="${n}" value="nao"${val==="nao"?" checked":""}> Não</label></div>`;
+  return `<form class="card stack" id="fMeus" novalidate><h3>Meus dados</h3>
+     <p class="small muted">Mantenha seu cadastro atualizado. Só você e a liderança veem os dados completos.</p>
+     <div class="row-btns" style="align-items:center">${avatar(u)}<label for="mF" style="flex:1">Foto de perfil<input id="mF" type="file" accept="image/*"></label></div>
+     <label for="mN">Nome completo<input id="mN" required maxlength="100" value="${esc(u.nome)}"></label>
+     <div class="grid2"><label for="mB">Data de nascimento<input id="mB" type="text" inputmode="numeric" autocomplete="off" placeholder="dd/mm/aaaa" maxlength="10" data-mdata value="${esc(dBR(u.nasc))}"></label>
+     <label for="mPr">Profissão<input id="mPr" maxlength="60" value="${esc(u.profissao||"")}"></label></div>
+     <label for="mE">Endereço completo<textarea id="mE" rows="2" maxlength="200" placeholder="Rua, número, bairro, cidade">${esc(u.endereco||"")}</textarea></label>
+     <label for="mT">Telefone principal (WhatsApp e login)<input id="mT" inputmode="tel" value="${esc(fmtTel(u.tel).replace(/&[^;]+;/g,""))}"></label>
+     <label for="mSA" id="mSAl" style="display:none">Senha atual (necessária para trocar o telefone)<span class="pw"><input id="mSA" type="password" autocomplete="current-password" maxlength="20"><button type="button" class="pwb" data-pw aria-label="Mostrar senha">Mostrar</button></span></label>
+     <label for="mT2">Outro telefone<input id="mT2" inputmode="tel" value="${esc(u.tel2?fmtTel(u.tel2).replace(/&[^;]+;/g,""):"")}"></label>
+     <fieldset><legend>Deixar seu telefone visível para os outros membros?</legend>${rad("mV",u.telVisivel==="nao"?"nao":"sim")}</fieldset>
+     <label for="mPai">Nome do pai<input id="mPai" maxlength="100" value="${esc(u.pai||"")}"></label>
+     <label for="mMae">Nome da mãe<input id="mMae" maxlength="100" value="${esc(u.mae||"")}"></label>
+     <fieldset><legend>Casado(a)?</legend>${rad("mC",u.casado||"")}</fieldset>
+     <label for="mCd">Data de casamento<input id="mCd" type="text" inputmode="numeric" autocomplete="off" placeholder="dd/mm/aaaa" maxlength="10" data-mdata value="${esc(dBR(u.casamento))}"></label>
+     <fieldset><legend>Batizado(a)?</legend>${rad("mBt",u.batizado||"")}</fieldset>
+     <div class="grid2"><label for="mBD">Data do batismo<input id="mBD" type="text" inputmode="numeric" autocomplete="off" placeholder="dd/mm/aaaa" maxlength="10" data-mdata value="${esc(dBR(u.batismoData))}"></label><label for="mBL">Local do batismo<input id="mBL" maxlength="80" value="${esc(u.batismoLocal||"")}"></label></div>
+     <button class="btn" type="submit">Salvar meus dados</button></form>`;
+}
 function salvar(){fila=fila.then(empurrar).catch(e=>{toast("Sem conexão. Tente de novo.");});return true;}
 function itemDe(r){return {...r.dados,id:r.id,_c:r.criado};}
 async function carregar(silencioso){
@@ -960,6 +982,7 @@ function telaPerfil(){
    <p class="small muted">Papel: ${u.papel==="lider"?"Líder"+((u.liderDe||[]).length?" de "+esc(u.liderDe.join(", ")):""):(PAPEL[u.papel]||"Membro")}</p>
    ${isAdmin()?`<button class="btn" data-go-conta="admin">${icon.shield} Painel do administrador</button>`:""}
    ${u.trocarSenha?`<div class="alerta" role="alert"><span><b>Crie sua senha pessoal</b><br><span class="small">Você entrou com uma senha temporária. Troque agora por uma que só você saiba.</span></span></div>`:""}
+   ${meusDadosForm(u)}
    <div class="card stack"><h3>Alertas de avisos</h3><p class="small muted">Receba os avisos importantes como notificação, com som e vibração, mesmo com o app fechado. Toque em Ativar em cada aparelho que usar.</p><div class="row-btns"><button class="btn sm" data-act="alertasOn">Ativar e testar</button><button class="btn ghost sm" data-act="alertasOff">Desativar</button></div></div>
    <form class="card stack" id="fSenha" novalidate><h3>Alterar senha</h3>
      <label for="sA">Senha atual<span class="pw"><input id="sA" type="password" autocomplete="current-password" required maxlength="20"><button type="button" class="pwb" data-pw aria-label="Mostrar senha">Mostrar</button></span></label>
@@ -1106,7 +1129,7 @@ document.addEventListener("change",ev=>{
 });
 document.addEventListener("compositionend",ev=>ev.target.dispatchEvent(new Event("input",{bubbles:true})));
 document.addEventListener("click",ev=>{const b=ev.target.closest&&ev.target.closest("[data-pw]");if(!b)return;const i=b.parentElement.querySelector("input");const ver=i.type==="password";i.type=ver?"text":"password";b.textContent=ver?"Ocultar":"Mostrar";b.setAttribute("aria-label",ver?"Ocultar senha":"Mostrar senha");});
-document.addEventListener("input",ev=>{if(ev.target&&ev.target.hasAttribute&&ev.target.hasAttribute("data-mdata")){let d=ev.target.value.replace(/\D/g,"").slice(0,8);ev.target.value=d.length>4?d.slice(0,2)+"/"+d.slice(2,4)+"/"+d.slice(4):d.length>2?d.slice(0,2)+"/"+d.slice(2):d;}
+document.addEventListener("input",ev=>{if(ev.target&&ev.target.id==="mT"){const o=el("#mSAl");if(o)o.style.display=digitos(ev.target.value)===digitos((me()||{}).tel)?"none":"";}if(ev.target&&ev.target.hasAttribute&&ev.target.hasAttribute("data-mdata")){let d=ev.target.value.replace(/\D/g,"").slice(0,8);ev.target.value=d.length>4?d.slice(0,2)+"/"+d.slice(2,4)+"/"+d.slice(4):d.length>2?d.slice(0,2)+"/"+d.slice(2):d;}
   const t=ev.target; if(ev.isComposing)return;
   if(t.id==="svBusca"){state.svq=t.value;const pos=t.selectionStart;render();const i=el("#svBusca");if(i){i.focus();i.setSelectionRange(pos,pos);}return;}
   if(t.id==="busca"||t.id==="admBusca"){if(t.id==="busca")state.busca=t.value;else state.admBusca=t.value;const pos=t.selectionStart;render();const i=el("#"+t.id);if(i){i.focus();i.setSelectionRange(pos,pos);}}
@@ -1156,6 +1179,26 @@ document.addEventListener("submit",async ev=>{
       if(st!=="ok"){btn.disabled=false;return mostrarErro(ev.target,"Não foi possível entrar agora. Tente de novo.");}
       toast(me()?.trocarSenha?"Crie agora a sua senha pessoal":"Bem-vindo(a), "+(me()?.nome||"").split(" ")[0]);return me()?.trocarSenha?go("conta","perfil"):go("inicio");
     }catch(_){btn.disabled=false;return mostrarErro(ev.target,"Sem conexão. Tente de novo em instantes.");}
+  }
+  if(f==="fMeus"&&me()){
+    const u=me(),btn=ev.target.querySelector('button[type="submit"]'),nome=v("mN").replace(/\s+/g," ");
+    const tel=digitos(v("mT")),tel2=digitos(v("mT2")),trocaTel=tel!==digitos(u.tel);
+    const bruto=id=>(el("#"+id).value||"").trim();
+    const err=!nome||nome.split(" ").length<2?"Escreva o nome completo (nome e sobrenome).":(bruto("mB")&&!v("mB"))?"Data de nascimento inválida. Use dd/mm/aaaa.":v("mB")>hojeISO?"A data de nascimento não pode ser no futuro.":(bruto("mCd")&&!v("mCd"))?"Data de casamento inválida. Use dd/mm/aaaa.":(bruto("mBD")&&!v("mBD"))?"Data de batismo inválida. Use dd/mm/aaaa.":(tel.length<10||tel.length>11)?"Informe o telefone principal com DDD.":(tel2&&(tel2.length<10||tel2.length>11))?"O outro telefone precisa ter DDD.":(trocaTel&&!el("#mSA").value)?"Para trocar o telefone principal, digite sua senha atual.":"";
+    if(err)return mostrarErro(ev.target,err);
+    btn.disabled=true;
+    if(trocaTel){
+      const r=await sb.auth.signInWithPassword({email:emailDe(u.tel),password:el("#mSA").value});
+      if(r.error){btn.disabled=false;return mostrarErro(ev.target,"A senha atual está incorreta.");}
+      const t=await sb.rpc("trocar_telefone",{novo:tel});
+      if(t.error){btn.disabled=false;return mostrarErro(ev.target,/uso/.test(t.error.message)?"Este telefone já está cadastrado em outra conta.":"Não foi possível trocar o telefone agora.");}
+      const r2=await sb.auth.signInWithPassword({email:emailDe(tel),password:el("#mSA").value});
+      if(r2.error){await sb.auth.signOut();toast("Telefone alterado. Entre de novo com o novo número.");location.reload();return;}
+      u.tel=tel;
+    }
+    let foto=u.foto||"";try{const ff=el("#mF").files[0];if(ff)foto=await lerImagem(ff,200);}catch(_){}
+    Object.assign(u,{nome,nasc:v("mB")||u.nasc||"",profissao:v("mPr"),endereco:v("mE"),tel2,telVisivel:rv("mV")||"sim",pai:v("mPai"),mae:v("mMae"),casado:rv("mC")||"",casamento:v("mCd"),batizado:rv("mBt")||"",batismoData:v("mBD"),batismoLocal:v("mBL"),foto});
+    salvar();render();return toast("Dados atualizados");
   }
   if(f==="fSenha"&&me()){
     const a=el("#sA").value,n=el("#sN").value,n2=el("#sN2").value,btn=ev.target.querySelector('button[type="submit"]');
