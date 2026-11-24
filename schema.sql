@@ -243,3 +243,7 @@ begin
 end $$;
 revoke all on function public.trocar_telefone(text) from public, anon;
 grant execute on function public.trocar_telefone(text) to authenticated;
+
+-- v3c: permissões (necessárias para push)
+grant select, insert, update, delete on public.push_subs to authenticated, service_role;
+grant select on public.perfis, public.registros to service_role;

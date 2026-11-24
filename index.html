@@ -526,7 +526,7 @@ function telaCantor(){
    <div class="card list">${lst.slice(0,MAX).map(h=>`<button class="link" style="display:flex;gap:.75rem;text-align:left;width:100%;padding:.55rem 0" data-cn="${h[0]}"><b style="min-width:2.4rem">${h[0]}</b><span>${esc(tituloBonito(h[1]))}</span></button>`).join("")||`<p class="small muted">Nenhum hino encontrado.</p>`}</div>
    ${lst.length>MAX?`<p class="small muted">Mostrando os ${MAX} primeiros de ${lst.length}. Digite mais para refinar.</p>`:""}</div></div>`;
 }
-const BUILD="1795534689";
+const BUILD="1795535216";
 let avisoVersao=false;
 async function checarVersao(){
   if(avisoVersao)return;
@@ -869,7 +869,7 @@ function telaMais(){
   if(podeDevo()&&!isAdmin())it.push(["publicar",icon.book,"Publicar devocional","Devocional ou reflexão do dia"]);
   return `<div class="wrap"><div class="section"><span class="eyebrow">Mais recursos</span><h2>O que você procura?</h2>
    ${isAdmin()?`<button class="alerta" data-go-conta="admin">${icon.shield}<span><b>Painel do administrador</b><br><span class="small">Cadastros, líderes, devocionais e mais</span></span></button>`:""}
-   <div class="menu">${it.map(i=>`<button data-go="${i[0]}">${i[1]}<b>${i[2]}</b><span>${i[3]}</span></button>`).join("")}</div>
+   <div class="menu">${it.slice().sort((a,b)=>a[2].localeCompare(b[2],"pt-BR")).map(i=>`<button data-go="${i[0]}">${i[1]}<b>${i[2]}</b><span>${i[3]}</span></button>`).join("")}</div>
    ${!me()?`<div class="lock">${icon.user}<span>Entre ou faça seu cadastro para ver membros, finanças e avisos dos seus ministérios.</span></div>`:""}
   </div></div>`;
 }
