@@ -194,7 +194,7 @@ create policy reg_apagar on public.registros for delete to authenticated
 insert into storage.buckets (id, name, public) values ('midia','midia',true) on conflict (id) do nothing;
 drop policy if exists midia_enviar on storage.objects;
 create policy midia_enviar on storage.objects for insert to authenticated
-  with check (bucket_id = 'midia' and public.meu_papel() in ('admin','colegiado','comunicacao'));
+  with check (bucket_id = 'midia' and public.meu_papel() in ('admin','colegiado','comunicacao','lider'));
 drop policy if exists midia_apagar on storage.objects;
 create policy midia_apagar on storage.objects for delete to authenticated
-  using (bucket_id = 'midia' and public.meu_papel() in ('admin','colegiado','comunicacao'));
+  using (bucket_id = 'midia' and public.meu_papel() in ('admin','colegiado','comunicacao','lider'));

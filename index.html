@@ -598,7 +598,7 @@ function telaInicio(){
     <div class="bday" role="list">${bodas.map(x=>{const c=md(x.casamento);return `<div class="b" role="listitem"><div class="d">${String(c[1]).padStart(2,"0")}</div>${avatar(x)}<div class="n">${esc(x.nome.split(" ")[0])}</div><span class="small muted">${Y-c[2]} anos</span></div>`;}).join("")}</div></section>`:""}
 
   <section class="section"><div class="sechead"><h2>Mural de avisos</h2>${podeAviso()?'<button class="back" data-go="enviar">Novo aviso</button>':""}</div>
-    ${avisos.length?`<div class="card list">${avisos.map(a=>`<div class="aviso"><div class="sechead"><b>${esc(a.t)}</b>${a.grupo!=="Geral"?`<span class="pill">${esc(a.grupo)}</span>`:""}</div><p class="small pre">${esc(a.x)}</p><span class="when">${esc((a.data||"").split("-").reverse().join("/"))}</span>
+    ${avisos.length?`<div class="card list">${avisos.map(a=>`<div class="aviso"><div class="sechead"><b>${esc(a.t)}</b>${a.grupo!=="Geral"?`<span class="pill">${esc(a.grupo)}</span>`:""}</div><p class="small pre">${esc(a.x)}</p>${a.img?`<img class="devo-img" src="${esc(a.img)}" alt="" loading="lazy">`:""}<span class="when">${esc((a.data||"").split("-").reverse().join("/"))}</span>
       ${podeAviso()?`<button class="link danger" data-ask="delAviso" data-id="${esc(a.id)}">Excluir aviso</button>${confirmBox("delAviso",a.id,"Excluir este aviso?","Excluir")}`:""}</div>`).join("")}</div>`:`<div class="vazio">Nenhum aviso no momento.</div>`}
   </section>
 
@@ -849,6 +849,7 @@ function telaEnviar(){
      <label for="aT">Título<input id="aT" required maxlength="80" placeholder="Ex.: Culto especial no sábado"></label>
      <label for="aX">Mensagem<textarea id="aX" rows="4" required maxlength="600" placeholder="Escreva o aviso"></textarea></label>
      <label for="aP">Enviar para<select id="aP">${grupos.map(g=>`<option value="${esc(g)}">${g==="Geral"?"Aviso geral: todos":"Ministério "+esc(g)}</option>`).join("")}</select></label>
+     <label for="aI">Imagem (opcional)<input id="aI" type="file" accept="image/*"></label>
      <label class="inline"><input type="checkbox" id="aN"> Avisar com som e vibração nos aparelhos</label>
      <button class="btn" type="submit">${icon.send} Enviar aviso</button></form>`:`<div class="vazio">Você ainda não foi definido como líder de nenhum ministério.</div>`}
   </div></div>`;
@@ -1161,7 +1162,8 @@ document.addEventListener("submit",async ev=>{
     if(!v("vQ")||!v("vL")||!v("vD")||!v("vP"))return mostrarErro(ev.target,"Preencha visitado, local, data e quem visitou.");
     if(!oc)return mostrarErro(ev.target,"Marque se a visita ocorreu.");
     db.visitas.unshift({id:uid(),quem:v("vQ"),local:v("vL"),data:v("vD"),por:v("vP"),ocorreu:oc,det:v("vX")});db.visitas.sort((a,b)=>b.data.localeCompare(a.data));salvar();render();return toast("Visita registrada");}
-  if(f==="fAv"&&podeAviso()){const g=v("aP");if(!todosGrupos()&&!(me().liderDe||[]).includes(g))return toast("Você não lidera este ministério");const nid=uid();db.avisos.unshift({id:nid,t:v("aT"),x:v("aX"),grupo:g,data:hojeISO,notificar:!!(el("#aN")&&el("#aN").checked)});vistosAdd(nid);salvar();go("inicio");return toast("Aviso enviado");}
+  if(f==="fAv"&&podeAviso()){const g=v("aP");if(!todosGrupos()&&!(me().liderDe||[]).includes(g))return toast("Você não lidera este ministério");let aimg="";const fa=el("#aI")&&el("#aI").files[0];if(fa){try{aimg=await enviarImagem(fa,"avisos",900);}catch(_){toast("Não foi possível enviar a imagem. Aviso publicado sem ela.");}}
+    const nid=uid();db.avisos.unshift({id:nid,img:aimg,t:v("aT"),x:v("aX"),grupo:g,data:hojeISO,notificar:!!(el("#aN")&&el("#aN").checked)});vistosAdd(nid);salvar();go("inicio");return toast("Aviso enviado");}
   if(f==="fOr"){const dest=(el('input[name="oD"]:checked')||{}).value||"intercessao";db.pedidos.unshift({id:uid(),x:v("oX"),nome:v("oN"),data:hojeISO,destino:dest,por:db.sessao});salvar();go("mais");return toast(dest==="igreja"?"Pedido compartilhado com a igreja":dest==="pastor"?"Pedido enviado ao pastor e ao colegiado":"Pedido enviado ao Ministério de Intercessão");}
   if(f==="fDevo"&&podeDevo()){let img="";const fi=el("#dI")&&el("#dI").files[0];if(fi){try{img=await enviarImagem(fi,"devocionais",900);}catch(_){toast("Não foi possível enviar a imagem. Publicado sem ela.");}}
     db.devocionais.unshift({id:uid(),tipo:v("dTp"),t:v("dT"),ref:v("dR"),vers:v("dV"),texto:v("dX"),autor:v("dA"),data:hojeISO,img});salvar();ev.target.reset();render();return toast("Publicado na tela inicial");}
