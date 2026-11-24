@@ -526,7 +526,7 @@ function telaCantor(){
    <div class="card list">${lst.slice(0,MAX).map(h=>`<button class="link" style="display:flex;gap:.75rem;text-align:left;width:100%;padding:.55rem 0" data-cn="${h[0]}"><b style="min-width:2.4rem">${h[0]}</b><span>${esc(tituloBonito(h[1]))}</span></button>`).join("")||`<p class="small muted">Nenhum hino encontrado.</p>`}</div>
    ${lst.length>MAX?`<p class="small muted">Mostrando os ${MAX} primeiros de ${lst.length}. Digite mais para refinar.</p>`:""}</div></div>`;
 }
-const BUILD="1795534326";
+const BUILD="1795534689";
 let avisoVersao=false;
 async function checarVersao(){
   if(avisoVersao)return;
@@ -543,18 +543,40 @@ async function checarVersao(){
 }
 const BIBLIA=[["GEN","Gênesis",50],["EXO","Êxodo",40],["LEV","Levítico",27],["NUM","Números",36],["DEU","Deuteronômio",34],["JOS","Josué",24],["JDG","Juízes",21],["RUT","Rute",4],["1SA","1 Samuel",31],["2SA","2 Samuel",24],["1KI","1 Reis",22],["2KI","2 Reis",25],["1CH","1 Crônicas",29],["2CH","2 Crônicas",36],["EZR","Esdras",10],["NEH","Neemias",13],["EST","Ester",10],["JOB","Jó",42],["PSA","Salmos",150],["PRO","Provérbios",31],["ECC","Eclesiastes",12],["SNG","Cantares de Salomão",8],["ISA","Isaías",66],["JER","Jeremias",52],["LAM","Lamentações",5],["EZK","Ezequiel",48],["DAN","Daniel",12],["HOS","Oseias",14],["JOL","Joel",3],["AMO","Amós",9],["OBA","Obadias",1],["JON","Jonas",4],["MIC","Miqueias",7],["NAM","Naum",3],["HAB","Habacuque",3],["ZEP","Sofonias",3],["HAG","Ageu",2],["ZEC","Zacarias",14],["MAL","Malaquias",4],
 ["MAT","Mateus",28],["MRK","Marcos",16],["LUK","Lucas",24],["JHN","João",21],["ACT","Atos",28],["ROM","Romanos",16],["1CO","1 Coríntios",16],["2CO","2 Coríntios",13],["GAL","Gálatas",6],["EPH","Efésios",6],["PHP","Filipenses",4],["COL","Colossenses",4],["1TH","1 Tessalonicenses",5],["2TH","2 Tessalonicenses",3],["1TI","1 Timóteo",6],["2TI","2 Timóteo",4],["TIT","Tito",3],["PHM","Filemom",1],["HEB","Hebreus",13],["JAS","Tiago",5],["1PE","1 Pedro",5],["2PE","2 Pedro",3],["1JN","1 João",5],["2JN","2 João",1],["3JN","3 João",1],["JUD","Judas",1],["REV","Apocalipse",22]];
+const BIB_URL="https://raw.githubusercontent.com/thiagobodruk/biblia/master/json/acf.json";
+let BIB=null,bibErro=false,bibCarregando=false;
+async function carregarBiblia(){
+  if(bibCarregando)return;bibCarregando=true;bibErro=false;
+  try{
+    let r=null,c=null;
+    try{c=await caches.open("ibr-biblia");r=await c.match(BIB_URL);}catch(_){}
+    if(!r){r=await fetch(BIB_URL);if(!r.ok)throw 0;if(c){try{await c.put(BIB_URL,r.clone());}catch(_){}}}
+    const j=JSON.parse((await r.text()).replace(/^﻿/,""));
+    if(!Array.isArray(j)||j.length!==66)throw 0;BIB=j;
+  }catch(_){bibErro=true;}
+  bibCarregando=false;if(state.tab==="mais"&&state.sub==="biblia")render();
+}
 function telaBiblia(){
   const bi=Math.min(Math.max(+state.bl||0,0),BIBLIA.length-1),b=BIBLIA[bi],cap=Math.min(Math.max(+state.bc||1,1),b[2]),ver=String(state.bv||"").replace(/\D/g,"").slice(0,3);
-  const url=`https://www.bible.com/bible/1930/${b[0]}.${cap}${ver?"."+ver:""}.NVT`;
   const op=(a,z)=>BIBLIA.slice(a,z).map((x,i)=>`<option value="${a+i}"${a+i===bi?" selected":""}>${x[1]}</option>`).join("");
-  return `<div class="wrap"><div class="section">${voltar()}<span class="eyebrow">Palavra de Deus</span><h2>Bíblia NVT</h2>
-   <p class="muted small">Nova Versão Transformadora. Escolha o livro e o capítulo e o texto abre no Bible.com (YouVersion), onde a NVT é distribuída com autorização da editora.</p>
-   <div class="card stack">
+  const nvt=`https://www.bible.com/bible/1930/${b[0]}.${cap}${ver?"."+ver:""}.NVT`;
+  const cab=`${voltar()}<span class="eyebrow">Palavra de Deus</span><h2>Bíblia</h2>`;
+  const sel=`<div class="card stack">
     <label for="blLivro">Livro<select id="blLivro"><optgroup label="Antigo Testamento">${op(0,39)}</optgroup><optgroup label="Novo Testamento">${op(39,66)}</optgroup></select></label>
     <div class="grid2"><label for="blCap">Capítulo<select id="blCap">${Array.from({length:b[2]},(_,i)=>`<option value="${i+1}"${i+1===cap?" selected":""}>${i+1}</option>`).join("")}</select></label>
-    <label for="blVer">Versículo (opcional)<input id="blVer" inputmode="numeric" maxlength="3" value="${esc(ver)}" placeholder="Ex.: 16"></label></div>
-    <a class="btn" target="_blank" rel="noopener" href="${url}">${icon.book} Ler ${esc(b[1])} ${cap}${ver?":"+ver:""}</a>
-   </div></div></div>`;
+    <label for="blVer">Destacar versículo<input id="blVer" inputmode="numeric" maxlength="3" value="${esc(ver)}" placeholder="Ex.: 16"></label></div></div>`;
+  if(!BIB){
+    if(!bibCarregando&&!bibErro)carregarBiblia();
+    return `<div class="wrap"><div class="section">${cab}${bibErro?`<div class="card stack"><p class="small">Não foi possível carregar a Bíblia agora. Verifique a internet e tente de novo.</p><button class="btn sm" data-act="bibliaRetry">Tentar de novo</button></div>`:`<p class="muted small">Carregando a Bíblia… (na primeira vez demora um pouco; depois fica salva no aparelho)</p>`}</div></div>`;
+  }
+  const vs=(BIB[bi].chapters[cap-1]||[]),fs=state.bfs||18,destaque=+ver;
+  const ant=!(bi===0&&cap===1),prox=!(bi===65&&cap===b[2]);
+  return `<div class="wrap"><div class="section">${cab}
+   <p class="muted small">Almeida Corrigida Fiel (ACF). Leitura dentro do app.</p>${sel}
+   <div class="row-btns">${ant?`<button class="btn ghost sm" data-bnav="-1">‹ Anterior</button>`:""}${prox?`<button class="btn ghost sm" data-bnav="1">Próximo ›</button>`:""}<button class="btn ghost sm" data-bfs="-2" aria-label="Diminuir letra">A−</button><button class="btn ghost sm" data-bfs="2" aria-label="Aumentar letra">A+</button></div>
+   <div class="card"><h3>${esc(b[1])} ${cap}</h3><div style="font-size:${fs}px;line-height:1.6">${vs.map((t,i)=>`<p style="margin:.35em 0;${destaque===i+1?"background:rgba(255,200,0,.28);border-radius:6px;padding:2px 4px":""}"><sup style="opacity:.6;font-weight:700">${i+1}</sup> ${esc(t)}</p>`).join("")}</div></div>
+   <p class="small muted">Prefere a NVT? <a target="_blank" rel="noopener" href="${nvt}">Abrir esta passagem na NVT (Bible.com)</a>. A NVT tem direitos autorais e só pode ser lida no site autorizado.</p>
+  </div></div>`;
 }
 function salvar(){fila=fila.then(empurrar).catch(e=>{toast("Sem conexão. Tente de novo.");});return true;}
 function itemDe(r){return {...r.dados,id:r.id,_c:r.criado};}
@@ -835,7 +857,7 @@ function telaMais(){
     ["escalas",icon.star,"Escalas do mês","Recepção, trânsito, café e mais"],
     ["fotos",icon.film,"Fatos e Fotos","Cultos e encontros"],
     ["indicacoes",icon.book,"Indicações","Livros, filmes e palestras"],
-    ["biblia",icon.book,"Bíblia NVT","Escolha o livro e o capítulo"],
+    ["biblia",icon.book,"Bíblia","Leia o livro e o capítulo no app"],
     ["cantor",icon.book,"Cantor Cristão","Número, nome e letra dos hinos"],
     ["oracao",icon.heart,"Pedido de oração","Para a igreja, a intercessão ou o pastor"],
     ["servicos",icon.user,"Primeiro os da fé","Serviços, negócios e vagas entre irmãos"],
@@ -1164,6 +1186,8 @@ document.addEventListener("click",ev=>{
   if(b.hasAttribute("data-cancel")){state.confirm=null;return render();}
   if(d.tirar){if(!isAdmin())return;const u=db.usuarios.find(x=>x.id===d.tirar);if(u){u.liderDe=(u.liderDe||[]).filter(m=>m!==d.min);if(!u.liderDe.length&&u.papel==="lider")u.papel="membro";salvar();render();}return;}
   if(d.vinc){if(!isAdmin())return;if(d.vinc==="desfazer")delete db.vinculos[d.k];else db.vinculos[d.k]={s:d.vinc,rel:d.rel||""};salvar();toast(d.vinc==="ok"?"Vínculo confirmado":d.vinc==="nao"?"Sugestão descartada":"Vínculo desfeito");return render();}
+  if(d.bnav!==undefined){let bi=+state.bl||0,c=(+state.bc||1)+(+d.bnav);if(c<1){if(bi>0){bi--;c=BIBLIA[bi][2];}else c=1;}else if(c>BIBLIA[bi][2]){if(bi<65){bi++;c=1;}else c=BIBLIA[bi][2];}state.bl=bi;state.bc=c;state.bv="";render();window.scrollTo(0,0);return;}
+  if(d.bfs!==undefined){state.bfs=Math.max(14,Math.min(40,(state.bfs||18)+(+d.bfs)));return render();}
   if(d.cn!==undefined){state.cn=+d.cn||null;render();window.scrollTo(0,0);return;}
   if(d.cfs!==undefined){state.cfs=Math.max(14,Math.min(40,(state.cfs||18)+(+d.cfs)));return render();}
   if(d.svf!==undefined){state.svf=d.svf;return render();}
@@ -1172,6 +1196,7 @@ document.addEventListener("click",ev=>{
   if(d.act==="esqueci"){const t=digitos((el("#lT")||{}).value||"");const m="Olá! Esqueci minha senha do app da IBR."+(t?" Meu telefone de cadastro é "+t+".":"")+" Pode me ajudar a criar uma nova?";window.open("https://wa.me/5586999625212?text="+encodeURIComponent(m),"_blank","noopener");return;}
   if(d.act==="alertasOn"){try{localStorage.setItem("ibr_alertas","on");}catch(_){}apitar();return ativarPush(false);}
   if(d.act==="alertasOff"){try{localStorage.setItem("ibr_alertas","off");}catch(_){}desativarPush();return toast("Alertas desativados");}
+  if(d.act==="bibliaRetry"){bibErro=false;carregarBiblia();return render();}
   if(d.act==="cantorRetry"){cantorErro=false;carregarCantor();return render();}
   if(d.act==="fechaTemp"){state.senhaTemp=null;return render();}
   if(d.act==="sair"){fila.then(()=>sb.auth.signOut()).then(()=>{db=dbNovo();marcarSnap();toast("Você saiu da conta");go("inicio");});return;}
