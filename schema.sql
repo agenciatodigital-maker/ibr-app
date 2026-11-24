@@ -198,3 +198,21 @@ create policy midia_enviar on storage.objects for insert to authenticated
 drop policy if exists midia_apagar on storage.objects;
 create policy midia_apagar on storage.objects for delete to authenticated
   using (bucket_id = 'midia' and public.meu_papel() in ('admin','colegiado','comunicacao','lider'));
+
+-- ===== v3: notificações push =====
+create table if not exists public.push_subs (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  endpoint text not null unique,
+  sub jsonb not null,
+  criado timestamptz default now()
+);
+alter table public.push_subs enable row level security;
+drop policy if exists ps_ver on public.push_subs;
+create policy ps_ver on public.push_subs for select to authenticated using (user_id = auth.uid());
+drop policy if exists ps_inserir on public.push_subs;
+create policy ps_inserir on public.push_subs for insert to authenticated with check (user_id = auth.uid());
+drop policy if exists ps_editar on public.push_subs;
+create policy ps_editar on public.push_subs for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+drop policy if exists ps_apagar on public.push_subs;
+create policy ps_apagar on public.push_subs for delete to authenticated using (user_id = auth.uid());
