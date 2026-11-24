@@ -485,6 +485,46 @@ function meusDadosForm(u){
      <div class="grid2"><label for="mBD">Data do batismo<input id="mBD" type="text" inputmode="numeric" autocomplete="off" placeholder="dd/mm/aaaa" maxlength="10" data-mdata value="${esc(dBR(u.batismoData))}"></label><label for="mBL">Local do batismo<input id="mBL" maxlength="80" value="${esc(u.batismoLocal||"")}"></label></div>
      <button class="btn" type="submit">Salvar meus dados</button></form>`;
 }
+const CANTOR_URL="https://raw.githubusercontent.com/samuel-cardoso/hinario-ibbf/master/src/data/hinos.json";
+let CANTOR=null,cantorErro=false,cantorCarregando=false;
+try{const c=JSON.parse(localStorage.getItem("ibr_cantor")||"null");if(Array.isArray(c)&&c.length>100)CANTOR=c;}catch(_){}
+async function carregarCantor(){
+  if(cantorCarregando)return;cantorCarregando=true;cantorErro=false;
+  try{
+    const r=await fetch(CANTOR_URL,{cache:"force-cache"});if(!r.ok)throw 0;
+    const j=await r.json();if(!Array.isArray(j)||!j.length)throw 0;
+    CANTOR=j.map(h=>[+h.id,String(h.title||""),String(h.lyrics||"")]).sort((a,b)=>a[0]-b[0]);
+    try{localStorage.setItem("ibr_cantor",JSON.stringify(CANTOR));}catch(_){}
+  }catch(_){cantorErro=!CANTOR;}
+  cantorCarregando=false;if(state.tab==="mais"&&state.sub==="cantor")render();
+}
+const SEM_MAIUSC=new Set(["de","da","do","das","dos","e","a","o","as","os","em","na","no","nas","nos","ao","aos","à","às","com","por","para","que","se","um","uma"]);
+const tituloBonito=s=>String(s||"").toLowerCase().replace(/(^|[\s(\-])(\S)/g,(m,a,c)=>a+c.toUpperCase()).replace(/\s(De|Da|Do|Das|Dos|E|A|O|As|Os|Ao|Aos|Em|Na|No|Nas|Nos|Com|Por|Para|Que|Se|Um|Uma)(?=\s)/g,x=>x.toLowerCase());
+function telaCantor(){
+  const cab=`${voltar()}<span class="eyebrow">Hinário das igrejas batistas</span><h2>Cantor Cristão</h2>`;
+  if(!me())return `<div class="wrap"><div class="section">${cab}<div class="lock">${icon.user}<span>Entre na sua conta para consultar o Cantor Cristão.</span></div><button class="btn" data-go-conta="entrar">Entrar</button></div></div>`;
+  if(!CANTOR){
+    if(!cantorCarregando&&!cantorErro)carregarCantor();
+    return `<div class="wrap"><div class="section">${cab}${cantorErro?`<div class="card stack"><p class="small">Não foi possível carregar o hinário agora. Verifique a internet e tente de novo.</p><button class="btn sm" data-act="cantorRetry">Tentar de novo</button></div>`:`<p class="muted small">Carregando os hinos…</p>`}</div></div>`;
+  }
+  if(state.cn){
+    const h=CANTOR.find(x=>x[0]===state.cn);
+    if(h){const fs=state.cfs||18;
+      return `<div class="wrap"><div class="section"><button class="back" data-cn="0">${icon.left} Todos os hinos</button><span class="eyebrow">Hino ${h[0]}</span><h2>${esc(tituloBonito(h[1]))}</h2>
+       <div class="row-btns"><button class="btn ghost sm" data-cfs="-2" aria-label="Diminuir letra">A−</button><button class="btn ghost sm" data-cfs="2" aria-label="Aumentar letra">A+</button>
+       ${h[0]>1?`<button class="btn ghost sm" data-cn="${h[0]-1}">‹ Anterior</button>`:""}${h[0]<CANTOR[CANTOR.length-1][0]?`<button class="btn ghost sm" data-cn="${h[0]+1}">Próximo ›</button>`:""}</div>
+       <div class="card"><p class="pre" style="font-size:${fs}px;line-height:1.55">${esc(h[2])}</p></div></div></div>`;}
+  }
+  const q=norm(state.cq||""),dig=(state.cq||"").trim();
+  let lst=CANTOR;
+  if(q||dig)lst=CANTOR.filter(h=>String(h[0])===dig||norm(h[1]).includes(q)||norm(h[2]).includes(q));
+  const MAX=150;
+  return `<div class="wrap"><div class="section">${cab}
+   <p class="muted small">${CANTOR.length} hinos. Busque pelo número, pelo nome ou por um trecho da letra.</p>
+   <label for="cqBusca">Buscar<input id="cqBusca" type="search" inputmode="search" value="${esc(state.cq||"")}" placeholder="Ex.: 25, Castelo Forte, Graça"></label>
+   <div class="card list">${lst.slice(0,MAX).map(h=>`<button class="link" style="display:flex;gap:.75rem;text-align:left;width:100%;padding:.55rem 0" data-cn="${h[0]}"><b style="min-width:2.4rem">${h[0]}</b><span>${esc(tituloBonito(h[1]))}</span></button>`).join("")||`<p class="small muted">Nenhum hino encontrado.</p>`}</div>
+   ${lst.length>MAX?`<p class="small muted">Mostrando os ${MAX} primeiros de ${lst.length}. Digite mais para refinar.</p>`:""}</div></div>`;
+}
 function salvar(){fila=fila.then(empurrar).catch(e=>{toast("Sem conexão. Tente de novo.");});return true;}
 function itemDe(r){return {...r.dados,id:r.id,_c:r.criado};}
 async function carregar(silencioso){
@@ -759,11 +799,12 @@ function telaLideranca(){
 }
 
 function telaMais(){
-  if(state.sub){const f={financas:telaFinancas,indicacoes:telaRec,visitas:telaVisitas,enviar:telaEnviar,oracao:telaOracao,ofertas:telaOfertas,escalas:telaEscalas,fotos:telaFotos,publicar:telaPublicar,servicos:telaServicos}[state.sub];if(f)return f();}
+  if(state.sub){const f={financas:telaFinancas,indicacoes:telaRec,visitas:telaVisitas,enviar:telaEnviar,oracao:telaOracao,cantor:telaCantor,ofertas:telaOfertas,escalas:telaEscalas,fotos:telaFotos,publicar:telaPublicar,servicos:telaServicos}[state.sub];if(f)return f();}
   const it=[
     ["escalas",icon.star,"Escalas do mês","Recepção, trânsito, café e mais"],
     ["fotos",icon.film,"Fatos e Fotos","Cultos e encontros"],
     ["indicacoes",icon.book,"Indicações","Livros, filmes e palestras"],
+    ["cantor",icon.book,"Cantor Cristão","Número, nome e letra dos hinos"],
     ["oracao",icon.heart,"Pedido de oração","Para a igreja, a intercessão ou o pastor"],
     ["servicos",icon.user,"Primeiro os da fé","Serviços, negócios e vagas entre irmãos"],
     ["ofertas",icon.pix,"Dízimos e ofertas","Chave PIX da igreja"],
@@ -1076,7 +1117,7 @@ document.addEventListener("click",ev=>{
   if(d.tab)return go(d.tab);
   if(d.tabGo)return go(d.tabGo);
   if(d.goConta){if(d.adm)state.admTab=d.adm;return go("conta",d.goConta);}
-  if(d.go)return go("mais",d.go);
+  if(d.go){state.cn=null;state.cq="";return go("mais",d.go);}
   if(d.back!==undefined){return d.back==="mais"?go("mais"):go(d.back);}
   if(d.devo){state.devoId=d.devo;return go("devo");}
   if(d.day){state.diaSel=+d.day;return render();}
@@ -1091,12 +1132,15 @@ document.addEventListener("click",ev=>{
   if(b.hasAttribute("data-cancel")){state.confirm=null;return render();}
   if(d.tirar){if(!isAdmin())return;const u=db.usuarios.find(x=>x.id===d.tirar);if(u){u.liderDe=(u.liderDe||[]).filter(m=>m!==d.min);if(!u.liderDe.length&&u.papel==="lider")u.papel="membro";salvar();render();}return;}
   if(d.vinc){if(!isAdmin())return;if(d.vinc==="desfazer")delete db.vinculos[d.k];else db.vinculos[d.k]={s:d.vinc,rel:d.rel||""};salvar();toast(d.vinc==="ok"?"Vínculo confirmado":d.vinc==="nao"?"Sugestão descartada":"Vínculo desfeito");return render();}
+  if(d.cn!==undefined){state.cn=+d.cn||null;render();window.scrollTo(0,0);return;}
+  if(d.cfs!==undefined){state.cfs=Math.max(14,Math.min(40,(state.cfs||18)+(+d.cfs)));return render();}
   if(d.svf!==undefined){state.svf=d.svf;return render();}
   if(d.do)return acao(d.do,d.id);
   if(d.act==="copyPix"){const t=el("#pixKey").textContent;try{navigator.clipboard.writeText(t).then(()=>toast("Chave copiada"),()=>toast("Selecione a chave e copie"));}catch(_){toast("Selecione a chave e copie");}return;}
   if(d.act==="esqueci"){const t=digitos((el("#lT")||{}).value||"");const m="Olá! Esqueci minha senha do app da IBR."+(t?" Meu telefone de cadastro é "+t+".":"")+" Pode me ajudar a criar uma nova?";window.open("https://wa.me/5586999625212?text="+encodeURIComponent(m),"_blank","noopener");return;}
   if(d.act==="alertasOn"){try{localStorage.setItem("ibr_alertas","on");}catch(_){}apitar();return ativarPush(false);}
   if(d.act==="alertasOff"){try{localStorage.setItem("ibr_alertas","off");}catch(_){}desativarPush();return toast("Alertas desativados");}
+  if(d.act==="cantorRetry"){cantorErro=false;carregarCantor();return render();}
   if(d.act==="fechaTemp"){state.senhaTemp=null;return render();}
   if(d.act==="sair"){fila.then(()=>sb.auth.signOut()).then(()=>{db=dbNovo();marcarSnap();toast("Você saiu da conta");go("inicio");});return;}
 });
@@ -1131,6 +1175,7 @@ document.addEventListener("compositionend",ev=>ev.target.dispatchEvent(new Event
 document.addEventListener("click",ev=>{const b=ev.target.closest&&ev.target.closest("[data-pw]");if(!b)return;const i=b.parentElement.querySelector("input");const ver=i.type==="password";i.type=ver?"text":"password";b.textContent=ver?"Ocultar":"Mostrar";b.setAttribute("aria-label",ver?"Ocultar senha":"Mostrar senha");});
 document.addEventListener("input",ev=>{if(ev.target&&ev.target.id==="mT"){const o=el("#mSAl");if(o)o.style.display=digitos(ev.target.value)===digitos((me()||{}).tel)?"none":"";}if(ev.target&&ev.target.hasAttribute&&ev.target.hasAttribute("data-mdata")){let d=ev.target.value.replace(/\D/g,"").slice(0,8);ev.target.value=d.length>4?d.slice(0,2)+"/"+d.slice(2,4)+"/"+d.slice(4):d.length>2?d.slice(0,2)+"/"+d.slice(2):d;}
   const t=ev.target; if(ev.isComposing)return;
+  if(t.id==="cqBusca"){state.cq=t.value;const pos=t.selectionStart;render();const i=el("#cqBusca");if(i){i.focus();i.setSelectionRange(pos,pos);}return;}
   if(t.id==="svBusca"){state.svq=t.value;const pos=t.selectionStart;render();const i=el("#svBusca");if(i){i.focus();i.setSelectionRange(pos,pos);}return;}
   if(t.id==="busca"||t.id==="admBusca"){if(t.id==="busca")state.busca=t.value;else state.admBusca=t.value;const pos=t.selectionStart;render();const i=el("#"+t.id);if(i){i.focus();i.setSelectionRange(pos,pos);}}
 });
