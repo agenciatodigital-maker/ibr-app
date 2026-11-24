@@ -144,3 +144,57 @@ begin
 end $$;
 revoke all on function public.admin_redefinir_senha(uuid, text) from public, anon;
 grant execute on function public.admin_redefinir_senha(uuid, text) to authenticated;
+
+-- v2: servicos ("Primeiro os da fe"), pedidos de oracao com destino, midia (imagens de devocional)
+alter table public.registros drop constraint if exists registros_colecao_check;
+alter table public.registros add constraint registros_colecao_check check (colecao in ('devocionais','avisos','visitas','recs','pedidos','albuns','financas','vinculos','servicos'));
+create or replace function public.em_ministerio(m text) returns boolean language sql stable security definer set search_path = public as $$
+  select exists(select 1 from public.perfis where id = auth.uid() and status = 'ativo' and ((dados->'mins') ? m or m = any(lider_de)))
+$$;
+create or replace function public.pode_escrever(col text) returns boolean
+language sql stable security definer set search_path = public as $$
+  select case col
+    when 'devocionais' then public.meu_papel() in ('admin','colegiado')
+    when 'avisos'      then public.meu_papel() in ('admin','colegiado','lider','comunicacao')
+    when 'albuns'      then public.meu_papel() in ('admin','comunicacao')
+    when 'visitas'     then public.meu_papel() in ('admin','colegiado','lider')
+    when 'financas'    then public.meu_papel() = 'admin'
+    when 'vinculos'    then public.meu_papel() = 'admin'
+    when 'recs'        then public.sou_ativo()
+    when 'pedidos'     then public.sou_ativo()
+    when 'servicos'    then public.sou_ativo()
+    else false end
+$$;
+drop policy if exists reg_ver on public.registros;
+create policy reg_ver on public.registros for select to authenticated using (
+  public.sou_ativo() and (
+    colecao in ('devocionais','avisos','albuns','financas','servicos')
+    or (colecao = 'recs' and (dados->>'status' = 'aprovada' or autor = auth.uid() or public.meu_papel() = 'admin'))
+    or (colecao = 'visitas' and public.meu_papel() in ('admin','colegiado','lider'))
+    or (colecao = 'vinculos' and public.meu_papel() = 'admin')
+    or (colecao = 'pedidos' and (
+         public.meu_papel() = 'admin' or autor = auth.uid()
+         or dados->>'destino' = 'igreja'
+         or (dados->>'destino' = 'pastor' and public.meu_papel() = 'colegiado')
+         or (coalesce(dados->>'destino','intercessao') = 'intercessao' and public.em_ministerio('Intercessão'))))
+  )
+);
+drop policy if exists reg_editar on public.registros;
+create policy reg_editar on public.registros for update to authenticated
+  using (public.pode_escrever(colecao) and (colecao not in ('recs','pedidos','servicos') or public.meu_papel() = 'admin' or (colecao = 'servicos' and autor = auth.uid())))
+  with check (public.pode_escrever(colecao));
+drop policy if exists reg_apagar on public.registros;
+create policy reg_apagar on public.registros for delete to authenticated
+  using (public.pode_escrever(colecao) and (
+    colecao not in ('recs','pedidos','servicos') or public.meu_papel() = 'admin'
+    or (colecao = 'servicos' and autor = auth.uid())
+    or (colecao = 'pedidos' and (autor = auth.uid()
+         or (dados->>'destino' = 'pastor' and public.meu_papel() = 'colegiado')
+         or (coalesce(dados->>'destino','intercessao') = 'intercessao' and public.em_ministerio('Intercessão'))))));
+insert into storage.buckets (id, name, public) values ('midia','midia',true) on conflict (id) do nothing;
+drop policy if exists midia_enviar on storage.objects;
+create policy midia_enviar on storage.objects for insert to authenticated
+  with check (bucket_id = 'midia' and public.meu_papel() in ('admin','colegiado','comunicacao'));
+drop policy if exists midia_apagar on storage.objects;
+create policy midia_apagar on storage.objects for delete to authenticated
+  using (bucket_id = 'midia' and public.meu_papel() in ('admin','colegiado','comunicacao'));
