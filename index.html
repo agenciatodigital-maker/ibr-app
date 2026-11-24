@@ -462,7 +462,7 @@ async function desativarPush(){
   try{const reg=await navigator.serviceWorker.ready;const sub=await reg.pushManager.getSubscription();
     if(sub){await sb.from("push_subs").delete().eq("endpoint",sub.endpoint);await sub.unsubscribe();}}catch(_){}
 }
-function enviarPush(t,x,g){try{sb.functions.invoke("enviar-push",{body:{titulo:t,corpo:(x||"").slice(0,140),grupo:g}});}catch(_){}}
+function enviarPush(t,x,g){try{sb.functions.invoke("enviar-push",{body:{titulo:t,corpo:(x||"").slice(0,140),grupo:g}}).then(r=>{const d=r&&r.data;if(!d){toast("Notificação não enviada: "+((r&&r.error&&r.error.message)||"erro"));return;}const f=(d.falhas||[]);toast("Notificação enviada para "+(d.enviados||0)+" aparelho(s)"+(f.length?" · "+f.length+" falha(s): "+f.map(z=>z.status).join(","):""));}).catch(()=>{});}catch(_){}}
 const dBR=s=>(s||"").split("-").reverse().join("/");
 function meusDadosForm(u){
   const rad=(n,val)=>`<div class="radios"><label><input type="radio" name="${n}" value="sim"${val==="sim"?" checked":""}> Sim</label><label><input type="radio" name="${n}" value="nao"${val==="nao"?" checked":""}> Não</label></div>`;
@@ -526,7 +526,7 @@ function telaCantor(){
    <div class="card list">${lst.slice(0,MAX).map(h=>`<button class="link" style="display:flex;gap:.75rem;text-align:left;width:100%;padding:.55rem 0" data-cn="${h[0]}"><b style="min-width:2.4rem">${h[0]}</b><span>${esc(tituloBonito(h[1]))}</span></button>`).join("")||`<p class="small muted">Nenhum hino encontrado.</p>`}</div>
    ${lst.length>MAX?`<p class="small muted">Mostrando os ${MAX} primeiros de ${lst.length}. Digite mais para refinar.</p>`:""}</div></div>`;
 }
-const BUILD="1795535216";
+const BUILD="1795536155";
 let avisoVersao=false;
 async function checarVersao(){
   if(avisoVersao)return;
