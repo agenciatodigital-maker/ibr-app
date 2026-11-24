@@ -517,7 +517,8 @@ function telaCantor(){
   }
   const q=norm(state.cq||""),dig=(state.cq||"").trim();
   let lst=CANTOR;
-  if(q||dig)lst=CANTOR.filter(h=>String(h[0])===dig||norm(h[1]).includes(q)||norm(h[2]).includes(q));
+  if(/^\d+$/.test(dig))lst=CANTOR.filter(h=>String(h[0]).startsWith(dig)).sort((a,b)=>(String(a[0])===dig?0:1)-(String(b[0])===dig?0:1)||a[0]-b[0]);
+  else if(q)lst=CANTOR.filter(h=>norm(h[1]).includes(q)||norm(h[2]).includes(q));
   const MAX=150;
   return `<div class="wrap"><div class="section">${cab}
    <p class="muted small">${CANTOR.length} hinos. Busque pelo número, pelo nome ou por um trecho da letra.</p>
