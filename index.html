@@ -819,9 +819,9 @@ function telaPublicar(){
    <form class="card stack" id="fDevo"><h3>Devocional ou reflexão do dia</h3>
       <label for="dTp">Tipo<select id="dTp"><option>Devocional</option><option>Reflexão</option></select></label>
       <label for="dT">Título<input id="dT" required maxlength="160"></label>
-      <div class="grid2"><label for="dR">Referência bíblica<input id="dR" maxlength="40" placeholder="Ex.: João 17:21"></label>
-      <label for="dA">Autor<input id="dA" maxlength="60" value="${esc(nomeExib(me()))}"></label></div>
-      <label for="dV">Versículo (texto)<textarea id="dV" rows="2" maxlength="400"></textarea></label>
+      <div class="grid2"><label for="dR">Referência bíblica<input id="dR" maxlength="150" placeholder="Ex.: João 17:21"></label>
+      <label for="dA">Autor<input id="dA" maxlength="120" value="${esc(nomeExib(me()))}"></label></div>
+      <label for="dV">Versículo (texto)<textarea id="dV" rows="4" maxlength="5000"></textarea></label>
       <label for="dX">Texto<textarea id="dX" rows="12" required maxlength="20000"></textarea></label>
       <label for="dI">Imagem (opcional)<input id="dI" type="file" accept="image/*"></label>
       <button class="btn" type="submit">Publicar</button></form>
@@ -1012,9 +1012,9 @@ function telaAdmin(){
     corpo=`<form class="card stack" id="fDevo"><h3>Publicar devocional ou reflexão</h3>
       <label for="dTp">Tipo<select id="dTp"><option>Devocional</option><option>Reflexão</option></select></label>
       <label for="dT">Título<input id="dT" required maxlength="160"></label>
-      <div class="grid2"><label for="dR">Referência bíblica<input id="dR" maxlength="40" placeholder="Ex.: João 17:21"></label>
-      <label for="dA">Autor<input id="dA" maxlength="60" value="${esc(nomeExib(me()))}"></label></div>
-      <label for="dV">Versículo (texto)<textarea id="dV" rows="2" maxlength="400"></textarea></label>
+      <div class="grid2"><label for="dR">Referência bíblica<input id="dR" maxlength="150" placeholder="Ex.: João 17:21"></label>
+      <label for="dA">Autor<input id="dA" maxlength="120" value="${esc(nomeExib(me()))}"></label></div>
+      <label for="dV">Versículo (texto)<textarea id="dV" rows="4" maxlength="5000"></textarea></label>
       <label for="dX">Texto<textarea id="dX" rows="12" required maxlength="20000"></textarea></label>
       <label for="dI">Imagem (opcional)<input id="dI" type="file" accept="image/*"></label>
       <button class="btn" type="submit">Publicar</button></form>
