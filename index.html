@@ -7,7 +7,7 @@ button.zoom{background:none;border:0;padding:0;width:100%;cursor:zoom-in}
 .doa-img{display:block;width:100%;max-height:300px;object-fit:cover;border-radius:12px}
 .likebar{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin:10px 0}
 .btn.liked{background:var(--red);color:#fff;border-color:var(--red)}
-</style><link rel="manifest" href="/manifest.webmanifest">
+.aviso .devo-img{max-height:none;height:auto;object-fit:contain;background:transparent}</style><link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#0B4F6C">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -556,7 +556,7 @@ function telaCantor(){
    <div class="card list">${lst.slice(0,MAX).map(h=>`<button class="link" style="display:flex;gap:.75rem;text-align:left;width:100%;padding:.55rem 0" data-cn="${h[0]}"><b style="min-width:2.4rem">${h[0]}</b><span>${esc(tituloBonito(h[1]))}</span></button>`).join("")||`<p class="small muted">Nenhum hino encontrado.</p>`}</div>
    ${lst.length>MAX?`<p class="small muted">Mostrando os ${MAX} primeiros de ${lst.length}. Digite mais para refinar.</p>`:""}</div></div>`;
 }
-const BUILD="1795615076";
+const BUILD="1795615285";
 let avisoVersao=false;
 async function checarVersao(){
   if(avisoVersao)return;
