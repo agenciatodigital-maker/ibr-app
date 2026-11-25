@@ -330,7 +330,27 @@ const ESC={
 
 /* ---------- Banco de dados (Supabase) ---------- */
 const SB_URL="https://zxawtsxthgxgbuuafrcs.supabase.co", SB_KEY="sb_publishable_bmYbT-Y63vYBNi99FYmwyQ_jCUZtKUH";
-const sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
+try{localStorage.removeItem("ibr_temp");}catch(_){}
+const idbP=new Promise(res=>{try{const r=indexedDB.open("ibr-auth",1);r.onupgradeneeded=()=>r.result.createObjectStore("kv");r.onsuccess=()=>res(r.result);r.onerror=()=>res(null);}catch(_){res(null);}});
+const idbOp=async(modo,fn)=>{const d=await idbP;if(!d)return null;return new Promise(res=>{try{const t=d.transaction("kv",modo),rq=fn(t.objectStore("kv"));t.oncomplete=()=>res(rq&&rq.result!==undefined?rq.result:null);t.onerror=()=>res(null);t.onabort=()=>res(null);}catch(_){res(null);}});};
+const authStore={
+  getItem:async k=>{let v=null;try{v=localStorage.getItem(k);}catch(_){}if(v==null){v=await idbOp("readonly",s=>s.get(k));if(v!=null){try{localStorage.setItem(k,v);}catch(_){}}}return v;},
+  setItem:async(k,v)=>{try{localStorage.setItem(k,v);}catch(_){}await idbOp("readwrite",s=>s.put(v,k));},
+  removeItem:async k=>{try{localStorage.removeItem(k);}catch(_){}await idbOp("readwrite",s=>s.delete(k));}
+};
+try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();}catch(_){}
+const sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false,storage:authStore}});
+let restauradoUmaVez=false;
+async function restaurarSessao(){
+  if(restauradoUmaVez)return false;restauradoUmaVez=true;
+  try{
+    if(!(window.PasswordCredential&&navigator.credentials&&navigator.credentials.get))return false;
+    const c=await navigator.credentials.get({password:true,mediation:"silent"});
+    if(!c||!c.id||!c.password)return false;
+    const r=await sb.auth.signInWithPassword({email:emailDe(c.id),password:c.password});
+    return !r.error;
+  }catch(_){return false;}
+}
 const COLS=["devocionais","avisos","visitas","recs","pedidos","albuns","financas","servicos","doacoes"];
 const emailDe=tel=>digitos(tel)+"@membros-ibr.app";
 function dbNovo(){return {usuarios:[],devocionais:[],avisos:[],visitas:[],recs:[],pedidos:[],albuns:[],vinculos:{},financas:[],servicos:[],doacoes:[],sessao:null};}
@@ -536,7 +556,7 @@ function telaCantor(){
    <div class="card list">${lst.slice(0,MAX).map(h=>`<button class="link" style="display:flex;gap:.75rem;text-align:left;width:100%;padding:.55rem 0" data-cn="${h[0]}"><b style="min-width:2.4rem">${h[0]}</b><span>${esc(tituloBonito(h[1]))}</span></button>`).join("")||`<p class="small muted">Nenhum hino encontrado.</p>`}</div>
    ${lst.length>MAX?`<p class="small muted">Mostrando os ${MAX} primeiros de ${lst.length}. Digite mais para refinar.</p>`:""}</div></div>`;
 }
-const BUILD="1795614793";
+const BUILD="1795615076";
 let avisoVersao=false;
 async function checarVersao(){
   if(avisoVersao)return;
@@ -646,7 +666,7 @@ function salvar(){fila=fila.then(empurrar).catch(e=>{toast("Sem conexão. Tente 
 function itemDe(r){return {...r.dados,id:r.id,_c:r.criado};}
 async function carregar(silencioso){
   const {data:{session}}=await sb.auth.getSession();
-  if(!session){db=dbNovo();marcarSnap();ultimaCarga=Date.now();return "sem";}
+  if(!session){if(await restaurarSessao())return carregar(silencioso);db=dbNovo();marcarSnap();ultimaCarga=Date.now();return "sem";}
   const meu=await sb.from("perfis").select("*").eq("id",session.user.id).maybeSingle();
   if(meu.error&&!meu.data){if(!silencioso)toast("Sem conexão com a igreja. Tente de novo.");return "erro";}
   if(!meu.data||meu.data.status!=="ativo"){await sb.auth.signOut();db=dbNovo();marcarSnap();return meu.data?"pendente":"sem";}
@@ -1088,7 +1108,7 @@ function telaConta(){
    <form class="card stack" id="fLogin" novalidate>
      <label for="lT">Telefone (WhatsApp)<input id="lT" name="username" inputmode="tel" autocomplete="username" required placeholder="(99) 9 0000-0000"></label>
      <label for="lS">Senha<span class="pw"><input id="lS" name="password" type="password" autocomplete="current-password" required maxlength="20"><button type="button" class="pwb" data-pw aria-label="Mostrar senha">Mostrar</button></span></label>
-     <label class="inline"><input type="checkbox" id="lK" checked> Manter conectado neste aparelho</label>
+     <p class="small muted">Você continua conectado(a) neste aparelho, sem precisar entrar de novo.</p>
      ${state.erro?`<p class="err" role="alert">${esc(state.erro)}</p>`:""}
      <button class="btn" type="submit">Entrar</button>
    </form>
