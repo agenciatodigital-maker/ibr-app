@@ -247,3 +247,80 @@ grant execute on function public.trocar_telefone(text) to authenticated;
 -- v3c: permissões (necessárias para push)
 grant select, insert, update, delete on public.push_subs to authenticated, service_role;
 grant select on public.perfis, public.registros to service_role;
+
+-- v4: doacoes ("Estou doando") + curtidas e visualizacoes do devocional
+alter table public.registros drop constraint if exists registros_colecao_check;
+alter table public.registros add constraint registros_colecao_check check (colecao in ('devocionais','avisos','visitas','recs','pedidos','albuns','financas','vinculos','servicos','doacoes'));
+create or replace function public.pode_escrever(col text) returns boolean
+language sql stable security definer set search_path = public as $$
+  select case col
+    when 'devocionais' then public.meu_papel() in ('admin','colegiado')
+    when 'avisos'      then public.meu_papel() in ('admin','colegiado','lider','comunicacao')
+    when 'albuns'      then public.meu_papel() in ('admin','comunicacao')
+    when 'visitas'     then public.meu_papel() in ('admin','colegiado','lider')
+    when 'financas'    then public.meu_papel() = 'admin'
+    when 'vinculos'    then public.meu_papel() = 'admin'
+    when 'recs'        then public.sou_ativo()
+    when 'pedidos'     then public.sou_ativo()
+    when 'servicos'    then public.sou_ativo()
+    when 'doacoes'     then public.sou_ativo()
+    else false end
+$$;
+drop policy if exists reg_ver on public.registros;
+create policy reg_ver on public.registros for select to authenticated using (
+  public.sou_ativo() and (
+    colecao in ('devocionais','avisos','albuns','financas','servicos','doacoes')
+    or (colecao = 'recs' and (dados->>'status' = 'aprovada' or autor = auth.uid() or public.meu_papel() = 'admin'))
+    or (colecao = 'visitas' and public.meu_papel() in ('admin','colegiado','lider'))
+    or (colecao = 'vinculos' and public.meu_papel() = 'admin')
+    or (colecao = 'pedidos' and (
+         public.meu_papel() = 'admin' or autor = auth.uid()
+         or dados->>'destino' = 'igreja'
+         or (dados->>'destino' = 'pastor' and public.meu_papel() = 'colegiado')
+         or (coalesce(dados->>'destino','intercessao') = 'intercessao' and public.em_ministerio('Intercessão'))))
+  )
+);
+drop policy if exists reg_editar on public.registros;
+create policy reg_editar on public.registros for update to authenticated
+  using (public.pode_escrever(colecao) and (colecao not in ('recs','pedidos','servicos','doacoes') or public.meu_papel() = 'admin' or (colecao in ('servicos','doacoes') and autor = auth.uid())))
+  with check (public.pode_escrever(colecao));
+drop policy if exists reg_apagar on public.registros;
+create policy reg_apagar on public.registros for delete to authenticated
+  using (public.pode_escrever(colecao) and (
+    colecao not in ('recs','pedidos','servicos','doacoes') or public.meu_papel() = 'admin'
+    or (colecao in ('servicos','doacoes') and autor = auth.uid())
+    or (colecao = 'pedidos' and (autor = auth.uid()
+         or (dados->>'destino' = 'pastor' and public.meu_papel() = 'colegiado')
+         or (coalesce(dados->>'destino','intercessao') = 'intercessao' and public.em_ministerio('Intercessão'))))));
+
+create table if not exists public.devo_interacoes (
+  devo_id text not null,
+  user_id uuid not null default auth.uid(),
+  curtiu boolean not null default false,
+  visto_em timestamptz not null default now(),
+  primary key (devo_id, user_id)
+);
+alter table public.devo_interacoes enable row level security;
+revoke all on public.devo_interacoes from anon, authenticated;
+grant select, insert, update, delete on public.devo_interacoes to service_role;
+
+create or replace function public.devo_stats() returns table(devo_id text, curtidas bigint, vistos bigint, eu_curti boolean)
+language sql stable security definer set search_path = public as $$
+  select i.devo_id, count(*) filter (where i.curtiu), count(*), coalesce(bool_or(i.curtiu and i.user_id = auth.uid()), false)
+  from public.devo_interacoes i where public.sou_ativo() group by i.devo_id
+$$;
+create or replace function public.devo_ver(id text) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if not public.sou_ativo() then return; end if;
+  insert into public.devo_interacoes(devo_id, user_id) values (id, auth.uid()) on conflict do nothing;
+end $$;
+create or replace function public.devo_curtir(id text, curtir boolean) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if not public.sou_ativo() then return; end if;
+  insert into public.devo_interacoes(devo_id, user_id, curtiu) values (id, auth.uid(), curtir)
+  on conflict (devo_id, user_id) do update set curtiu = excluded.curtiu;
+end $$;
+revoke all on function public.devo_stats(), public.devo_ver(text), public.devo_curtir(text, boolean) from public, anon;
+grant execute on function public.devo_stats(), public.devo_ver(text), public.devo_curtir(text, boolean) to authenticated;

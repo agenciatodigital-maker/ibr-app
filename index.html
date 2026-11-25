@@ -1,4 +1,13 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}.devo-img{display:block;width:100%;max-height:280px;object-fit:cover;border-radius:12px;margin:8px 0}</style><link rel="manifest" href="/manifest.webmanifest">
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}.devo-img{display:block;width:100%;max-height:280px;object-fit:cover;border-radius:12px;margin:8px 0}.ov{position:fixed;inset:0;z-index:9999;background:var(--bg,#fff);color:var(--fg,#111);overflow:auto;padding:max(14px,env(safe-area-inset-top)) 16px 32px}
+.ov .ovbar{position:sticky;top:0;display:flex;gap:8px;justify-content:flex-end;padding:8px 0;background:var(--bg,#fff);z-index:1}
+.ov .ovc{max-width:760px;margin:0 auto;font-size:1.15rem;line-height:1.6}
+.ov .ovc .pre{font-size:inherit}.ov .ovc h2{font-size:1.5rem}.ov .ovi{padding:14px 0;border-bottom:1px solid var(--line)}
+.ov .ovc img{max-width:100%;border-radius:12px;margin:8px 0}
+button.zoom{background:none;border:0;padding:0;width:100%;cursor:zoom-in}
+.doa-img{display:block;width:100%;max-height:300px;object-fit:cover;border-radius:12px}
+.likebar{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin:10px 0}
+.btn.liked{background:var(--red);color:#fff;border-color:var(--red)}
+</style><link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#0B4F6C">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -322,9 +331,9 @@ const ESC={
 /* ---------- Banco de dados (Supabase) ---------- */
 const SB_URL="https://zxawtsxthgxgbuuafrcs.supabase.co", SB_KEY="sb_publishable_bmYbT-Y63vYBNi99FYmwyQ_jCUZtKUH";
 const sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
-const COLS=["devocionais","avisos","visitas","recs","pedidos","albuns","financas","servicos"];
+const COLS=["devocionais","avisos","visitas","recs","pedidos","albuns","financas","servicos","doacoes"];
 const emailDe=tel=>digitos(tel)+"@membros-ibr.app";
-function dbNovo(){return {usuarios:[],devocionais:[],avisos:[],visitas:[],recs:[],pedidos:[],albuns:[],vinculos:{},financas:[],servicos:[],sessao:null};}
+function dbNovo(){return {usuarios:[],devocionais:[],avisos:[],visitas:[],recs:[],pedidos:[],albuns:[],vinculos:{},financas:[],servicos:[],doacoes:[],sessao:null};}
 let db=dbNovo(), snap=new Map(), vid={}, ultimaCarga=0, fila=Promise.resolve();
 const novoId=()=>(crypto.randomUUID?crypto.randomUUID():"xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==="x"?r:(r&3|8)).toString(16);}));
 function perfilRow(u){const {id,tel,papel,status,liderDe,novo,salt,senha,demo,criado,...d}=u;return {tel:digitos(tel),papel,status,lider_de:liderDe||[],novo:!!novo,dados:d};}
@@ -381,7 +390,8 @@ function telaServicos(){
     <div class="row-btns"><a class="btn sm" target="_blank" rel="noopener" href="https://wa.me/55${esc(digitos(s.tel))}?text=${encodeURIComponent("Olá, "+(s.nome||"").split(" ")[0]+"! Vi o seu anúncio em Primeiro os da fé, no app da IBR.")}">${icon.whats} Chamar no WhatsApp</a>
     ${(s.por===db.sessao||isAdmin())?`<button class="link danger" data-ask="delServ" data-id="${esc(s.id)}">Remover</button>`:""}</div>${confirmBox("delServ",s.id,"Remover este anúncio?","Remover")}</div>`;
   return `<div class="wrap"><div class="section">${voltar()}<span class="eyebrow">Gálatas 6:10</span><h2>Primeiro os da fé</h2>
-   <p class="muted small">“Façamos o bem a todos, mas principalmente aos da família da fé.” Espaço para os irmãos divulgarem serviços e negócios, e para quem procura trabalho.</p>
+   <div class="tabs2" role="group" aria-label="Seção"><button data-svaba="serv" aria-pressed="${state.svAba!=="doa"}">Serviços e negócios</button><button data-svaba="doa" aria-pressed="${state.svAba==="doa"}">Estou doando</button></div>
+   ${state.svAba==="doa"?telaDoacoes():`<p class="muted small">“Façamos o bem a todos, mas principalmente aos da família da fé.” Espaço para os irmãos divulgarem serviços e negócios, e para quem procura trabalho.</p>
    <div class="row-btns">${[["todos","Todos"],...SV_TIPOS].map(([k,l])=>`<button class="btn ${f===k?"":"ghost "}sm" data-svf="${k}">${l}</button>`).join("")}</div>
    <label for="svBusca">Buscar<input id="svBusca" type="search" value="${esc(state.svq||"")}" placeholder="Ex.: eletricista, ótica, pedreiro"></label>
    ${lst.length?lst.map(card).join(""):`<div class="vazio">${db.servicos.length?"Nada encontrado com esse filtro.":"Ainda não há anúncios. Seja o primeiro a divulgar!"}</div>`}
@@ -392,7 +402,7 @@ function telaServicos(){
      <label for="svD">Descrição<textarea id="svD" rows="3" required maxlength="400" placeholder="O que você faz, experiência, horários"></textarea></label>
      <div class="grid2"><label for="svW">WhatsApp<input id="svW" inputmode="tel" required value="${esc(digitos(me().tel))}"></label>
      <label for="svL">Bairro ou cidade<input id="svL" maxlength="60"></label></div>
-     <button class="btn" type="submit">Publicar anúncio</button></form>
+     <button class="btn" type="submit">Publicar anúncio</button></form>`}
   </div></div>`;
 }
 function listaPedidos(){
@@ -526,7 +536,7 @@ function telaCantor(){
    <div class="card list">${lst.slice(0,MAX).map(h=>`<button class="link" style="display:flex;gap:.75rem;text-align:left;width:100%;padding:.55rem 0" data-cn="${h[0]}"><b style="min-width:2.4rem">${h[0]}</b><span>${esc(tituloBonito(h[1]))}</span></button>`).join("")||`<p class="small muted">Nenhum hino encontrado.</p>`}</div>
    ${lst.length>MAX?`<p class="small muted">Mostrando os ${MAX} primeiros de ${lst.length}. Digite mais para refinar.</p>`:""}</div></div>`;
 }
-const BUILD="1795536155";
+const BUILD="1795614793";
 let avisoVersao=false;
 async function checarVersao(){
   if(avisoVersao)return;
@@ -577,6 +587,60 @@ function telaBiblia(){
    <div class="card"><h3>${esc(b[1])} ${cap}</h3><div style="font-size:${fs}px;line-height:1.6">${vs.map((t,i)=>`<p style="margin:.35em 0;${destaque===i+1?"background:rgba(255,200,0,.28);border-radius:6px;padding:2px 4px":""}"><sup style="opacity:.6;font-weight:700">${i+1}</sup> ${esc(t)}</p>`).join("")}</div></div>
    <p class="small muted">Prefere a NVT? <a target="_blank" rel="noopener" href="${nvt}">Abrir esta passagem na NVT (Bible.com)</a>. A NVT tem direitos autorais e só pode ser lida no site autorizado.</p>
   </div></div>`;
+}
+function ovFechar(){const o=document.getElementById("ov");if(o){o.remove();document.body.style.overflow="";}}
+function ovAbrir(inner){
+  ovFechar();const o=document.createElement("div");o.id="ov";o.className="ov";o.setAttribute("role","dialog");o.setAttribute("aria-modal","true");
+  o.innerHTML=`<div class="ovbar"><button class="btn ghost sm" data-ovfs="-1" aria-label="Diminuir letra">A−</button><button class="btn ghost sm" data-ovfs="1" aria-label="Aumentar letra">A+</button><button class="btn sm" data-ov-close="1">Fechar ✕</button></div><div class="ovc" id="ovc">${inner}</div>`;
+  document.body.appendChild(o);document.body.style.overflow="hidden";o.scrollTop=0;
+}
+document.addEventListener("keydown",e=>{if(e.key==="Escape")ovFechar();});
+let ovTam=1.15;
+const dataBR=s=>String(s||"").split("-").reverse().join("/");
+function avisoOv(a){return `<div class="ovi"><div class="sechead"><h2>${esc(a.t)}</h2>${a.grupo!=="Geral"?`<span class="pill">${esc(a.grupo)}</span>`:""}</div><p class="pre">${esc(a.x)}</p>${a.img?`<img src="${esc(a.img)}" alt="">`:""}<span class="when">${esc(dataBR(a.data))}</span></div>`;}
+function abrirAvisos(id){
+  const l=db.avisos.filter(avisoRelevante);const sel=id?l.filter(a=>a.id===id):l;
+  ovAbrir(sel.length?sel.map(avisoOv).join(""):"<p>Nenhum aviso no momento.</p>");
+}
+
+// ---- doacoes: "Estou doando" dentro de "Primeiro os da fe" ----
+function telaDoacoes(){
+  const q=norm(state.dq||"");
+  const lst=db.doacoes.filter(s=>!q||norm([s.titulo,s.desc,s.local].join(" ")).includes(q));
+  const card=s=>`<div class="card stack">${s.img?`<button class="zoom" data-zoom="${esc(s.img)}" aria-label="Ampliar foto"><img class="doa-img" src="${esc(s.img)}" alt="${esc(s.titulo)}" loading="lazy"></button>`:""}
+    <div class="sechead"><b>${esc(s.titulo)}</b><span class="pill">${s.doado?"Já doado":"Disponível"}</span></div>
+    <p class="small pre">${esc(s.desc)}</p><span class="small muted">${esc(s.nome||"")}${s.local?" · "+esc(s.local):""} · ${esc(dataBR(s.data))}</span>
+    <div class="row-btns">${s.doado?"":`<a class="btn sm" target="_blank" rel="noopener" href="https://wa.me/55${esc(digitos(s.tel))}?text=${encodeURIComponent("Olá, "+(s.nome||"").split(" ")[0]+"! Vi a sua doação ("+(s.titulo||"")+") no app da IBR e tenho interesse.")}">${icon.whats} Quero este item</a>`}
+    ${(s.por===db.sessao||isAdmin())?`${s.doado?"":`<button class="link" data-do="doado" data-id="${esc(s.id)}">Marcar como doado</button>`}<button class="link danger" data-ask="delDoa" data-id="${esc(s.id)}">Remover</button>`:""}</div>${confirmBox("delDoa",s.id,"Remover esta doação?","Remover")}</div>`;
+  return `<p class="muted small">Tem algo em bom estado que você não usa mais? Anuncie aqui para doar a um irmão que precisa.</p>
+   <label for="dnBusca">Buscar<input id="dnBusca" type="search" value="${esc(state.dq||"")}" placeholder="Ex.: berço, roupa, fogão"></label>
+   ${lst.length?lst.map(card).join(""):`<div class="vazio">${db.doacoes.length?"Nada encontrado.":"Ainda não há doações anunciadas."}</div>`}
+   <form class="card stack" id="fDn" novalidate><h3>Estou doando</h3>
+     <label for="dnT">O que você está doando<input id="dnT" required maxlength="80" placeholder="Ex.: Berço de madeira"></label>
+     <label for="dnD">Descrição<textarea id="dnD" rows="3" required maxlength="600" placeholder="Estado de conservação, tamanho, como retirar"></textarea></label>
+     <label for="dnI">Foto<input id="dnI" type="file" accept="image/*"></label>
+     <div class="grid2"><label for="dnW">WhatsApp<input id="dnW" inputmode="tel" required value="${esc(digitos(me().tel))}"></label>
+     <label for="dnL">Bairro ou cidade<input id="dnL" maxlength="60"></label></div>
+     <button class="btn" type="submit">Publicar doação</button></form>`;
+}
+const devoVistos=new Set();
+async function devoStats(force){
+  if(!db.sessao||state.dstBusy)return;if(!force&&Date.now()-(state.dstAt||0)<30000)return;
+  state.dstBusy=true;
+  try{const r=await sb.rpc("devo_stats");state.dstAt=Date.now();
+    if(!r.error&&r.data){const m={};r.data.forEach(x=>{m[x.devo_id]={c:+x.curtidas,v:+x.vistos,eu:!!x.eu_curti};});const ant=JSON.stringify(state.dst||{});state.dst=m;if(JSON.stringify(m)!==ant)render();}}catch(_){state.dstAt=Date.now();}
+  state.dstBusy=false;
+}
+function devoCurtir(id){
+  const s=(state.dst=state.dst||{});const x=s[id]||(s[id]={c:0,v:0,eu:false});x.eu=!x.eu;x.c=Math.max(0,x.c+(x.eu?1:-1));if(x.eu&&!x.v)x.v=1;render();
+  sb.rpc("devo_curtir",{id,curtir:x.eu}).then(r=>{if(r.error)toast("Não foi possível curtir agora.");devoStats(true);}).catch(()=>{});
+}
+function devoBarra(id,contar){
+  if(!db.sessao||!id)return "";
+  if(contar&&!devoVistos.has(id)){devoVistos.add(id);sb.rpc("devo_ver",{id}).then(()=>devoStats(true)).catch(()=>{});}
+  devoStats();
+  const x=(state.dst||{})[id]||{c:0,v:0,eu:false};
+  return `<div class="likebar"><button class="btn ${x.eu?"liked":"ghost"} sm" data-dlike="${esc(id)}" aria-pressed="${x.eu}">${x.eu?"♥ Curtido":"♡ Curtir"} · ${x.c}</button><span class="small muted">👁 ${x.v} visualiza${x.v===1?"ção":"ções"}</span></div>`;
 }
 function salvar(){fila=fila.then(empurrar).catch(e=>{toast("Sem conexão. Tente de novo.");});return true;}
 function itemDe(r){return {...r.dados,id:r.id,_c:r.criado};}
@@ -722,7 +786,7 @@ function telaInicio(){
   return hero()+`<div class="wrap">
   ${isAdmin()&&pend?`<button class="alerta" data-go-conta="admin">${icon.shield}<span><b>${pend} cadastro${pend>1?"s":""} aguardando aprovação</b><br><span class="small">Abrir painel do administrador</span></span></button>`:""}
   <article class="devo"><div class="sechead"><span class="eyebrow">${dv?esc(dv.tipo)+" do dia":"Devocional do dia"}</span><span class="small muted">escrito pelo colegiado</span></div>
-    ${dv?`<h2>${esc(dv.t)}</h2>${dv.img?`<img class="devo-img" src="${esc(dv.img)}" alt="" loading="lazy">`:""}${dv.ref?`<span class="ref">${esc(dv.ref)}</span>`:""}<p class="muted">${esc(dv.texto.length>140?dv.texto.slice(0,140).trim()+"…":dv.texto)}</p><button class="btn" data-devo="${esc(dv.id)}">Ler ${esc(dv.tipo.toLowerCase())}</button>`
+    ${dv?`<h2>${esc(dv.t)}</h2>${dv.img?`<img class="devo-img" src="${esc(dv.img)}" alt="" loading="lazy">`:""}${dv.ref?`<span class="ref">${esc(dv.ref)}</span>`:""}<p class="muted">${esc(dv.texto.length>140?dv.texto.slice(0,140).trim()+"…":dv.texto)}</p><button class="btn" data-devo="${esc(dv.id)}">Ler ${esc(dv.tipo.toLowerCase())}</button>${devoBarra(dv.id,false)}`
       :`<p class="muted">O primeiro devocional ainda não foi publicado. O colegiado publica pelo painel do administrador.</p>`}
     ${isAdmin()?`<button class="btn ghost" data-go-conta="admin" data-adm="publicar">Publicar devocional ou reflexão</button>`:podeDevo()?`<button class="btn ghost" data-go="publicar">Publicar devocional ou reflexão</button>`:""}
   </article>
@@ -734,9 +798,9 @@ function telaInicio(){
   ${bodas.length?`<section class="section"><div class="sechead"><h2>Bodas de ${MESES[M]}</h2><span class="small muted">aniversários de casamento</span></div>
     <div class="bday" role="list">${bodas.map(x=>{const c=md(x.casamento);return `<div class="b" role="listitem"><div class="d">${String(c[1]).padStart(2,"0")}</div>${avatar(x)}<div class="n">${esc(x.nome.split(" ")[0])}</div><span class="small muted">${Y-c[2]} anos</span></div>`;}).join("")}</div></section>`:""}
 
-  <section class="section"><div class="sechead"><h2>Mural de avisos</h2>${podeAviso()?'<button class="back" data-go="enviar">Novo aviso</button>':""}</div>
+  <section class="section"><div class="sechead"><h2>Mural de avisos</h2><span class="row-btns">${avisos.length?'<button class="back" data-avx-all="1">⤢ Ampliar</button>':""}${podeAviso()?'<button class="back" data-go="enviar">Novo aviso</button>':""}</span></div>
     ${avisos.length?`<div class="card list">${avisos.map(a=>`<div class="aviso"><div class="sechead"><b>${esc(a.t)}</b>${a.grupo!=="Geral"?`<span class="pill">${esc(a.grupo)}</span>`:""}</div><p class="small pre">${esc(a.x)}</p>${a.img?`<img class="devo-img" src="${esc(a.img)}" alt="" loading="lazy">`:""}<span class="when">${esc((a.data||"").split("-").reverse().join("/"))}</span>
-      ${podeAviso()?`<button class="link danger" data-ask="delAviso" data-id="${esc(a.id)}">Excluir aviso</button>${confirmBox("delAviso",a.id,"Excluir este aviso?","Excluir")}`:""}</div>`).join("")}</div>`:`<div class="vazio">Nenhum aviso no momento.</div>`}
+      <button class="link" data-avx="${esc(a.id)}">⤢ Expandir</button>${podeAviso()?`<button class="link danger" data-ask="delAviso" data-id="${esc(a.id)}">Excluir aviso</button>${confirmBox("delAviso",a.id,"Excluir este aviso?","Excluir")}`:""}</div>`).join("")}</div>`:`<div class="vazio">Nenhum aviso no momento.</div>`}
   </section>
 
   <section class="section"><div class="sechead"><h2>Próximos encontros</h2><button class="back" data-tab-go="agenda">Ver agenda</button></div>
@@ -757,7 +821,7 @@ function telaDevo(){
   if(!dv)return `<div class="wrap"><div class="section">${voltar("inicio")}<h2>Devocional</h2><div class="vazio">Nenhum devocional publicado ainda.</div></div></div>`;
   return `<div class="wrap"><div class="section">${voltar("inicio")}<span class="eyebrow">${esc(dv.tipo)} · ${esc(dv.data.split("-").reverse().join("/"))}</span>
    <article class="leitura stack"><h2>${esc(dv.t)}</h2>${dv.img?`<img class="devo-img" src="${esc(dv.img)}" alt="" loading="lazy">`:""}${dv.vers?`<blockquote>“${esc(dv.vers)}”</blockquote>`:""}${dv.ref?`<span class="ref">${esc(dv.ref)}</span>`:""}
-   <p class="pre">${esc(dv.texto)}</p><span class="small muted">${esc(dv.autor||"")}</span></article>
+   <p class="pre">${esc(dv.texto)}</p><span class="small muted">${esc(dv.autor||"")}</span>${devoBarra(dv.id,true)}</article>
    ${lst.length>1?`<h3>Anteriores</h3><div class="card list">${lst.filter(d=>d!==dv).map(d=>`<button class="lrow" data-devo="${esc(d.id)}"><b>${esc(d.t)}</b><span class="small muted">${esc(d.tipo)} · ${esc(d.data.split("-").reverse().join("/"))}</span></button>`).join("")}</div>`:""}
   </div></div>`;
 }
@@ -860,7 +924,7 @@ function telaMais(){
     ["biblia",icon.book,"Bíblia","Leia o livro e o capítulo no app"],
     ["cantor",icon.book,"Cantor Cristão","Número, nome e letra dos hinos"],
     ["oracao",icon.heart,"Pedido de oração","Para a igreja, a intercessão ou o pastor"],
-    ["servicos",icon.user,"Primeiro os da fé","Serviços, negócios e vagas entre irmãos"],
+    ["servicos",icon.user,"Primeiro os da fé","Serviços, negócios, vagas e doações"],
     ["ofertas",icon.pix,"Dízimos e ofertas","Chave PIX da igreja"],
     ["financas",icon.chart,"Finanças IBR","Entradas, saídas e dizimistas"],
   ];
@@ -1190,6 +1254,13 @@ document.addEventListener("click",ev=>{
   if(d.bfs!==undefined){state.bfs=Math.max(14,Math.min(40,(state.bfs||18)+(+d.bfs)));return render();}
   if(d.cn!==undefined){state.cn=+d.cn||null;render();window.scrollTo(0,0);return;}
   if(d.cfs!==undefined){state.cfs=Math.max(14,Math.min(40,(state.cfs||18)+(+d.cfs)));return render();}
+  if(d.ovClose){return ovFechar();}
+  if(d.ovfs){ovTam=Math.min(2,Math.max(.9,ovTam+(+d.ovfs)*.15));const c=document.getElementById("ovc");if(c)c.style.fontSize=ovTam+"rem";return;}
+  if(d.zoom){return ovAbrir(`<img src="${esc(d.zoom)}" alt="">`);}
+  if(d.avx){return abrirAvisos(d.avx);}
+  if(d.avxAll!==undefined){return abrirAvisos();}
+  if(d.svaba){state.svAba=d.svaba;return render();}
+  if(d.dlike){return devoCurtir(d.dlike);}
   if(d.svf!==undefined){state.svf=d.svf;return render();}
   if(d.do)return acao(d.do,d.id);
   if(d.act==="copyPix"){const t=el("#pixKey").textContent;try{navigator.clipboard.writeText(t).then(()=>toast("Chave copiada"),()=>toast("Selecione a chave e copie"));}catch(_){toast("Selecione a chave e copie");}return;}
@@ -1209,6 +1280,8 @@ function acao(a,id){
   const u=db.usuarios.find(x=>x.id===id);
   if(a==="resetSenha"&&u&&!u.demo&&u.id!==db.sessao){resetarSenha(u);state.confirm=null;return;}
   if(a==="delServ"){const sv=db.servicos.find(x=>x.id===id);if(sv&&(sv.por===db.sessao||isAdmin())){db.servicos=db.servicos.filter(x=>x.id!==id);toast("Anúncio removido");}}
+  if(a==="delDoa"){const sv=db.doacoes.find(x=>x.id===id);if(sv&&(sv.por===db.sessao||isAdmin())){db.doacoes=db.doacoes.filter(x=>x.id!==id);toast("Doação removida");}}
+  if(a==="doado"){const sv=db.doacoes.find(x=>x.id===id);if(sv&&(sv.por===db.sessao||isAdmin())){sv.doado=true;toast("Marcado como doado");}}
   if(a==="aprovar"&&u){u.status="ativo";u.novo=false;toast("Cadastro aprovado");}
   if(a==="recusar"&&u&&!u.demo&&u.status==="pendente"){db.usuarios=db.usuarios.filter(x=>x.id!==id);Object.keys(db.vinculos).forEach(k=>{if(k.split("|").includes(id))delete db.vinculos[k];});toast("Cadastro recusado e apagado");}
   if(a==="excluir"&&u&&!u.demo&&u.id!==db.sessao){db.usuarios=db.usuarios.filter(x=>x.id!==id);Object.keys(db.vinculos).forEach(k=>{if(k.split("|").includes(id))delete db.vinculos[k];});toast("Cadastro excluído");}
@@ -1236,6 +1309,7 @@ document.addEventListener("input",ev=>{if(ev.target&&ev.target.id==="mT"){const 
   if(t.id==="blCap"){state.bc=+t.value;return render();}
   if(t.id==="blVer"){state.bv=t.value.replace(/\D/g,"");const pos=t.selectionStart;render();const i=el("#blVer");if(i){i.focus();i.setSelectionRange(pos,pos);}return;}
   if(t.id==="cqBusca"){state.cq=t.value;const pos=t.selectionStart;render();const i=el("#cqBusca");if(i){i.focus();i.setSelectionRange(pos,pos);}return;}
+  if(t.id==="dnBusca"){state.dq=t.value;const pos=t.selectionStart;render();const i=el("#dnBusca");if(i){i.focus();i.setSelectionRange(pos,pos);}return;}
   if(t.id==="svBusca"){state.svq=t.value;const pos=t.selectionStart;render();const i=el("#svBusca");if(i){i.focus();i.setSelectionRange(pos,pos);}return;}
   if(t.id==="busca"||t.id==="admBusca"){if(t.id==="busca")state.busca=t.value;else state.admBusca=t.value;const pos=t.selectionStart;render();const i=el("#"+t.id);if(i){i.focus();i.setSelectionRange(pos,pos);}}
 });
@@ -1326,6 +1400,15 @@ document.addEventListener("submit",async ev=>{
     if(w.length<10||w.length>11)return mostrarErro(ev.target,"Informe o WhatsApp com DDD.");
     db.servicos.unshift({id:uid(),tipo:v("svT"),nome:v("svN"),ramo:v("svR"),desc:v("svD"),tel:w,local:v("svL"),data:hojeISO,por:db.sessao});
     salvar();render();return toast("Anúncio publicado");
+  }
+  if(f==="fDn"&&me()){
+    let w=digitos(v("dnW"));if(w.length>11&&w.startsWith("55"))w=w.slice(2);
+    if(!v("dnT")||!v("dnD"))return mostrarErro(ev.target,"Informe o item e a descrição.");
+    if(w.length<10||w.length>11)return mostrarErro(ev.target,"Informe o WhatsApp com DDD.");
+    let img="";const fi=el("#dnI")&&el("#dnI").files[0];
+    if(fi){toast("Enviando a foto…");try{img=await enviarImagem(fi,"doacoes",900);}catch(_){toast("Não foi possível enviar a foto. Publicado sem ela.");}}
+    db.doacoes.unshift({id:uid(),titulo:v("dnT"),desc:v("dnD"),img,tel:w,local:v("dnL"),nome:nomeExib(me()),data:hojeISO,por:db.sessao,doado:false});
+    salvar();render();return toast("Doação publicada");
   }
   if(f==="fRec"&&me()){db.recs.unshift({id:uid(),k:state.recTab,t:v("recT"),a:v("recA")||"—",por:me().nome,status:"pendente"});salvar();ev.target.reset();return toast("Indicação enviada para aprovação");}
   if(f==="fVis"&&isLider()){const oc=(el('input[name="vO"]:checked')||{}).value;
