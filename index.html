@@ -8,7 +8,7 @@ button.zoom{background:none;border:0;padding:0;width:100%;cursor:zoom-in}
 .likebar{display:flex;align-items:center;margin:6px 0 0}
 .likebtn{display:inline-flex;align-items:center;gap:6px;background:none;border:0;padding:6px 4px;min-height:36px;font:inherit;font-size:.9rem;font-weight:600;color:var(--fg,inherit);cursor:pointer;opacity:.85}
 .likebtn:active svg{transform:scale(1.2)}.likebtn svg{transition:transform .12s}
-.aviso .devo-img{max-height:none;height:auto;object-fit:contain;background:transparent}</style><link rel="manifest" href="/manifest.webmanifest">
+.aviso .devo-img{max-height:none;height:auto;object-fit:contain;background:transparent}.rec-img{width:64px;height:88px;object-fit:cover;border-radius:8px;flex:none}</style><link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#0B4F6C">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -557,7 +557,7 @@ function telaCantor(){
    <div class="card list">${lst.slice(0,MAX).map(h=>`<button class="link" style="display:flex;gap:.75rem;text-align:left;width:100%;padding:.55rem 0" data-cn="${h[0]}"><b style="min-width:2.4rem">${h[0]}</b><span>${esc(tituloBonito(h[1]))}</span></button>`).join("")||`<p class="small muted">Nenhum hino encontrado.</p>`}</div>
    ${lst.length>MAX?`<p class="small muted">Mostrando os ${MAX} primeiros de ${lst.length}. Digite mais para refinar.</p>`:""}</div></div>`;
 }
-const BUILD="1795621380";
+const BUILD="1795697639";
 let avisoVersao=false;
 async function checarVersao(){
   if(avisoVersao)return;
@@ -1038,10 +1038,11 @@ function telaRec(){
   return `<div class="wrap"><div class="section">${voltar()}<span class="eyebrow">Sugestões da comunidade</span><h2>Indicações</h2>
    <p class="muted small">Toda indicação passa pela aprovação do pastor e do Ministério de Comunicação antes de aparecer aqui.</p>
    <div class="tabs2" role="group">${[["livro","Livros"],["filme","Filmes"],["palestra","Palestras"]].map(([a,b])=>`<button data-rec="${a}" aria-pressed="${k===a}">${b}</button>`).join("")}</div>
-   ${lst.length?`<div class="card list">${lst.map(r=>`<div class="rec"><div class="kind">${ic[r.k]}</div><div><b>${esc(r.t)}</b><div class="small muted">${esc(r.a)}</div><div class="small">Indicado por ${esc(r.por)}</div></div></div>`).join("")}</div>`:`<div class="vazio">Nenhuma indicação aprovada nesta categoria ainda.</div>`}
+   ${lst.length?`<div class="card list">${lst.map(r=>`<div class="rec">${r.img?`<button class="zoom" style="width:auto" data-zoom="${esc(r.img)}" aria-label="Ampliar foto"><img class="rec-img" src="${esc(r.img)}" alt="" loading="lazy"></button>`:`<div class="kind">${ic[r.k]}</div>`}<div><b>${esc(r.t)}</b><div class="small muted">${esc(r.a)}</div><div class="small">Indicado por ${esc(r.por)}</div></div></div>`).join("")}</div>`:`<div class="vazio">Nenhuma indicação aprovada nesta categoria ainda.</div>`}
    ${me()?`<form class="card stack" id="fRec"><h3>Indicar algo</h3>
      <label for="recT">Título<input id="recT" required maxlength="120" placeholder="Nome do livro, filme ou palestra"></label>
      <label for="recA">Autor ou detalhe<input id="recA" maxlength="120" placeholder="Autor, ano ou link"></label>
+     <label for="recI">Foto (capa ou cartaz, opcional)<input id="recI" type="file" accept="image/*"></label>
      <button class="btn" type="submit">Enviar para aprovação</button></form>`:precisaLogin("Entre para indicar livros, filmes e palestras.")}
   </div></div>`;
 }
@@ -1190,7 +1191,7 @@ function telaAdmin(){
       <p class="small muted">Possíveis parentes aparecem na aba Famílias depois da aprovação.</p>
       <div class="row-btns"><button class="btn sm" data-do="aprovar" data-id="${esc(u.id)}">Aprovar</button><button class="btn ghost sm" data-ask="recusar" data-id="${esc(u.id)}">Recusar</button></div>
       ${confirmBox("recusar",u.id,"Recusar e apagar este cadastro?","Recusar")}</div>`).join(""):`<div class="vazio">Nenhum cadastro pendente.</div>`)
-      +`<h3>Indicações aguardando aprovação</h3>`+(recsP.length?recsP.map(r=>`<div class="card stack"><div><b>${esc(r.t)}</b> <span class="muted small">· ${esc(r.k)} · ${esc(r.a)}</span></div><span class="small">Indicado por ${esc(r.por)}</span>
+      +`<h3>Indicações aguardando aprovação</h3>`+(recsP.length?recsP.map(r=>`<div class="card stack"><div><b>${esc(r.t)}</b> <span class="muted small">· ${esc(r.k)} · ${esc(r.a)}</span></div>${r.img?`<img class="devo-img" src="${esc(r.img)}" alt="" loading="lazy" style="max-height:220px;width:auto">`:""}<span class="small">Indicado por ${esc(r.por)}</span>
       <div class="row-btns"><button class="btn sm" data-do="aprovarRec" data-id="${esc(r.id)}">Aprovar</button><button class="btn ghost sm" data-do="recusarRec" data-id="${esc(r.id)}">Recusar</button></div></div>`).join(""):`<div class="vazio">Nenhuma indicação pendente.</div>`);
   }else if(t==="familias"){
     const sg=sugestoes(), conf=Object.entries(db.vinculos).filter(([,v])=>v.s==="ok");
@@ -1432,7 +1433,7 @@ document.addEventListener("submit",async ev=>{
     db.doacoes.unshift({id:uid(),titulo:v("dnT"),desc:v("dnD"),img,tel:w,local:v("dnL"),nome:nomeExib(me()),data:hojeISO,por:db.sessao,doado:false});
     salvar();render();return toast("Doação publicada");
   }
-  if(f==="fRec"&&me()){db.recs.unshift({id:uid(),k:state.recTab,t:v("recT"),a:v("recA")||"—",por:me().nome,status:"pendente"});salvar();ev.target.reset();return toast("Indicação enviada para aprovação");}
+  if(f==="fRec"&&me()){let img="";const fr=el("#recI")&&el("#recI").files[0];if(fr){toast("Enviando a foto…");try{img=await enviarImagem(fr,"indicacoes",700);}catch(_){toast("Não foi possível enviar a foto. Indicação enviada sem ela.");}}db.recs.unshift({id:uid(),k:state.recTab,t:v("recT"),a:v("recA")||"—",img,por:me().nome,status:"pendente"});salvar();ev.target.reset();return toast("Indicação enviada para aprovação");}
   if(f==="fVis"&&isLider()){const oc=(el('input[name="vO"]:checked')||{}).value;
     if(!v("vQ")||!v("vL")||!v("vD")||!v("vP"))return mostrarErro(ev.target,"Preencha visitado, local, data e quem visitou.");
     if(!oc)return mostrarErro(ev.target,"Marque se a visita ocorreu.");

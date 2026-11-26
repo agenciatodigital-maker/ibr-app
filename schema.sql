@@ -324,3 +324,8 @@ begin
 end $$;
 revoke all on function public.devo_stats(), public.devo_ver(text), public.devo_curtir(text, boolean) from public, anon;
 grant execute on function public.devo_stats(), public.devo_ver(text), public.devo_curtir(text, boolean) to authenticated;
+
+-- v4b: membros ativos podem enviar fotos de doacoes e indicacoes
+drop policy if exists midia_enviar_membros on storage.objects;
+create policy midia_enviar_membros on storage.objects for insert to authenticated
+  with check (bucket_id = 'midia' and public.sou_ativo() and (name like 'doacoes/%' or name like 'indicacoes/%'));
